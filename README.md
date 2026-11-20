@@ -4,7 +4,7 @@
 
 **Design email templates. Send them from your apps with one call.**
 
-[Website](https://adrianeyre.github.io/email-template/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-template/releases)
+[Website](https://email-platform.adrianeyre.co.uk/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-platform/releases)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/illustrations/hero-dark.png" />
@@ -107,7 +107,16 @@ curl -X POST http://localhost:4320/v1/messages \
        "variables":{"email":"ada@example.com","resetUrl":"https://app.example.com/reset?t=abc","linkLifetime":"1 hour"}}'
 ```
 
-Or with the typed Node client, [`@adrianeyre/email-client`](packages/email-client/README.md), which checks each built-in email's variables when you compile:
+Or with the typed Node client, [`@adrianeyre/email-client`](packages/email-client/README.md), which checks each built-in email's variables when you compile. It is published to [GitHub Packages](https://github.com/adrianeyre/email-platform/pkgs/npm/email-client), so point the `@adrianeyre` scope there in an `.npmrc` beside your app's `package.json`, with a GitHub token that has the `read:packages` scope:
+
+```ini
+@adrianeyre:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+```sh
+pnpm add @adrianeyre/email-client
+```
 
 ```ts
 import { createEmailClient } from "@adrianeyre/email-client";
@@ -128,7 +137,7 @@ The email is sent from the template's configuration (here `Wizzaroo <no-reply@wi
 
 | Read                                                                    | For                                                                                    |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Local setup](docs/getting-started/local-setup.md)                      | Running it, your first email, and every command                                        |
+| [Local setup](docs/getting-started/local-setup.md)                      | Running it, your first email, sending from Node, and every command                     |
 | [Environment variables](docs/reference/environment-variables.md)        | `DATABASE_URL`, `PORT`, `APP_URL` and `ENCRYPTION_KEY`                                 |
 | [Templates](docs/guide/templates.md)                                    | The designer, Socials, previews, slugs, headers, footers, configurations and built-ins |
 | [Sending](docs/guide/sending.md)                                        | `POST /v1/messages`, the from address and idempotency                                  |

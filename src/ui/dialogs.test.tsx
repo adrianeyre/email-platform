@@ -355,6 +355,6 @@ describe("the Credits", () => {
       dialog()
         .querySelector<HTMLAnchorElement>(".credits-creator a")
         ?.getAttribute("href"),
-    ).toBe("https://github.com/adrianeyre/email-template");
+    ).toBe("https://github.com/adrianeyre/email-platform");
   });
 });

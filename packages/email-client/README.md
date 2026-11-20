@@ -195,4 +195,4 @@ const template = await email.getTemplate(templateId);
 
 ## Publishing
 
-Bump `version` in `package.json`, then push a tag `email-client-v<version>`, such as `email-client-v0.1.0`. The **Publish email client** workflow builds, tests and publishes the package to GitHub Packages.
+Bump `version` in `package.json` in a pull request. When it merges to `main`, the **Publish email client** workflow typechecks, tests, builds and publishes the package to GitHub Packages. A version that is already published is skipped, so changes that don't bump the version publish nothing. The workflow can also be run by hand from the Actions tab.

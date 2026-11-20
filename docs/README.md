@@ -2,7 +2,7 @@
 
 ## Getting started
 
-- [Local setup](getting-started/local-setup.md): prerequisites, running it, sending your first email, and every command.
+- [Local setup](getting-started/local-setup.md): prerequisites, running it, sending your first email, installing the Node client from GitHub Packages, and every command.
 - [Environment variables](reference/environment-variables.md): the four the app reads.
 
 ## Using it

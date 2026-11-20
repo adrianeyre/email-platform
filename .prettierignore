@@ -2,3 +2,4 @@ pnpm-lock.yaml
 src/drizzle/**
 site/dist
 site/stageshow
+CHANGELOG.md
