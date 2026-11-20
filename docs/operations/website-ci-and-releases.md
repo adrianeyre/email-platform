@@ -36,4 +36,4 @@ node site/stageshow/scripts/film.mjs "http://127.0.0.1:4330/" --select '[data-il
 
 ## The email client
 
-`.github/workflows/publish-email-client.yml` publishes [`@adrianeyre/email-client`](../../packages/email-client/README.md) to GitHub Packages on an `email-client-v*` tag.
+`.github/workflows/publish-email-client.yml` publishes [`@adrianeyre/email-client`](../../packages/email-client/README.md) to GitHub Packages when `packages/email-client` changes on `main` with a version that isn't published yet, or when run by hand. To release the client, bump `version` in its `package.json`. One job builds, tests and packs the client with a read-only token; the publish job installs nothing and publishes the packed tarball with `packages: write`.

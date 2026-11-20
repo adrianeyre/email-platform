@@ -1,46 +1,64 @@
+# Publishes @adrianeyre/email-client (packages/email-client) to GitHub
+# Packages whenever it changes on main with a version that isn't published
+# yet, or by hand. To release the client, bump `version` in its package.json
+# in a pull request; the merge publishes it. A version already published is
+# skipped, so a change that doesn't bump the version publishes nothing.
+#
+# Two jobs, so no dependency code ever runs beside a write token, as in
+# release.yml: `build` installs the dependencies, typechecks, tests, builds
+# and packs the client with a read-only token; `publish`, the only job that
+# can write packages, installs nothing and publishes the packed tarball with
+# npm, its scripts off. It reads the name and version from the tarball
+# itself and checks them before using them. Node and pnpm come from the pins
+# in package.json, never from versions written here.
 name: Publish email client
 
 on:
   push:
-    tags:
-      - "email-client-v*"
+    branches: [main]
+    paths:
+      - "packages/email-client/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/publish-email-client.yml"
   workflow_dispatch:
 
 permissions:
   contents: read
-  packages: write
+
+# One publish at a time, never cancelled half-way through.
+concurrency:
+  group: publish-email-client
+  cancel-in-progress: false
 
 jobs:
-  publish:
+  build:
+    name: Build the email client
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: packages/email-client
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          node-version: 26
-          cache: pnpm
-          registry-url: https://npm.pkg.github.com
-          scope: "@adrianeyre"
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          cache: true
 
       - name: Install
         working-directory: .
         run: pnpm install --frozen-lockfile
-
-      - name: Check the tag matches the package version
-        if: startsWith(github.ref, 'refs/tags/email-client-v')
-        run: |
-          tag_version="${GITHUB_REF_NAME#email-client-v}"
-          package_version="$(node -p "require('./package.json').version")"
-          if [ "$tag_version" != "$package_version" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match package.json version $package_version"
-            exit 1
-          fi
 
       - name: Typecheck
         run: pnpm run typecheck
@@ -51,8 +69,93 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      - name: Publish
-        working-directory: .
-        run: pnpm --filter @adrianeyre/email-client publish --no-git-checks
+      - name: Pack
+        run: pnpm pack --pack-destination "$RUNNER_TEMP/email-client"
+
+      - name: Keep the package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: email-client
+          path: ${{ runner.temp }}/email-client/*.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish the email client
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # Publishes the package to GitHub Packages.
+      packages: write
+    steps:
+      # Only package.json, for the Node pin: nothing is installed or run.
+      - name: Check out the Node pin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          sparse-checkout: package.json
+          sparse-checkout-cone-mode: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+          registry-url: https://npm.pkg.github.com
+          scope: "@adrianeyre"
+
+      - name: Fetch the package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: email-client
+          path: ${{ runner.temp }}/email-client
+
+      # The name and version are read from the tarball that will be
+      # published, and must be the client's name and a plain version.
+      - name: Check the package
+        id: package
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          tarballs=("$RUNNER_TEMP"/email-client/*.tgz)
+          if [ "${#tarballs[@]}" -ne 1 ]; then
+            echo "::error::Expected one packed tarball, found ${#tarballs[@]}."
+            exit 1
+          fi
+          manifest="$(tar -xOzf "${tarballs[0]}" package/package.json)"
+          name="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).name))' "$manifest")"
+          version="$(node -e 'process.stdout.write(String(JSON.parse(process.argv[1]).version))' "$manifest")"
+          if [ "$name" != "@adrianeyre/email-client" ]; then
+            echo "::error::The tarball is ${name}, not @adrianeyre/email-client."
+            exit 1
+          fi
+          if ! [[ "$version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "::error::The version ${version} is not a plain version."
+            exit 1
+          fi
+          {
+            echo "tarball=${tarballs[0]}"
+            echo "version=${version}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Check whether the version is published
+        id: published
+        run: |
+          set -euo pipefail
+          if npm view "@adrianeyre/email-client@${VERSION}" version --json >/dev/null 2>&1; then
+            echo "@adrianeyre/email-client@${VERSION} is already published; nothing to do."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
         env:
+          VERSION: ${{ steps.package.outputs.version }}
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish
+        if: ${{ steps.published.outputs.exists != 'true' }}
+        run: npm publish "$TARBALL" --ignore-scripts
+        env:
+          TARBALL: ${{ steps.package.outputs.tarball }}
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
