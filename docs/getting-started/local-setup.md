@@ -57,6 +57,45 @@ The variables in `.env` are described in [Environment variables](../reference/en
 
 6. Open **Logs** to see it sent, and Mailpit to read it. Every field of a send is in [Sending](../guide/sending.md).
 
+## Send from a Node app
+
+The typed client, [`@adrianeyre/email-client`](../../packages/email-client/README.md), is published to [GitHub Packages](https://github.com/adrianeyre/email-platform/pkgs/npm/email-client) whenever its version changes on `main`.
+
+1. Create a GitHub [personal access token (classic)](https://github.com/settings/tokens) with the `read:packages` scope, and make it available to your app's installs as `GITHUB_TOKEN`. In GitHub Actions, the workflow's own `GITHUB_TOKEN` works when the workflow has `packages: read`.
+2. Add an `.npmrc` beside your app's `package.json`, so the `@adrianeyre` scope comes from GitHub Packages:
+
+   ```ini
+   @adrianeyre:registry=https://npm.pkg.github.com
+   //npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+   ```
+
+3. Install the client:
+
+   ```sh
+   pnpm add @adrianeyre/email-client
+   ```
+
+4. Send with the API key from step 4 above:
+
+   ```ts
+   import { createEmailClient } from "@adrianeyre/email-client";
+
+   const email = createEmailClient({
+     baseUrl: "http://localhost:4320",
+     apiKey: process.env.EMAIL_API_KEY,
+   });
+   await email.builtIn.resetYourPassword({
+     to: "ada@example.com",
+     variables: {
+       email: "ada@example.com",
+       resetUrl: "https://app.example.com/reset?t=abc",
+       linkLifetime: "1 hour",
+     },
+   });
+   ```
+
+Everything the client does is in [its README](../../packages/email-client/README.md).
+
 ## Commands
 
 | Command                                        | Does                                                                                                                                                                         |
