@@ -9,6 +9,6 @@ Every variable is read in [`src/config/vars.ts`](../../src/config/vars.ts). Ever
 | `APP_URL`        | Yes      |         | Where the UI is reached; session cookies are `Secure` when it is `https://`       |
 | `ENCRYPTION_KEY` | Yes      |         | 32 random bytes in base64 (`openssl rand -base64 32`); encrypts the SMTP password |
 
-`.env.example` has development values for the stack in `docker-compose.dev.yml`. The backup service has its own variables, listed in [Backups and restore](../operations/backups-and-restore.md), and so does the Postfix service (`POSTFIX_SENDER_DOMAINS` and others), listed in [Sending with Postfix](../operations/sending-with-postfix.md).
+`.env.example` has development values for the stack in `docker-compose.dev.yml`. The backup service has its own variables, listed in [Backups and restore](../operations/backups-and-restore.md).
 
 The website build reads `SITE_URL` and `SITE_DOMAIN`, and `pnpm site:film` reads `SITE_FILM_URL` and `CHROME_PATH`; see [Website, CI and releases](../operations/website-ci-and-releases.md).

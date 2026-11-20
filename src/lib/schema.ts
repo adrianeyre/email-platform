@@ -13,7 +13,6 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { defaultFromAddress } from "../settings/default-from.js";
-import { defaultSmtpHost } from "../settings/default-smtp.js";
 
 const bytea = customType<{ data: Buffer; driverData: Buffer }>({
   dataType: () => "bytea",
@@ -58,7 +57,7 @@ export const settings = pgTable(
   "settings",
   {
     id: integer("id").primaryKey().default(1),
-    smtpHost: text("smtp_host").default(defaultSmtpHost),
+    smtpHost: text("smtp_host"),
     smtpPort: integer("smtp_port").notNull().default(587),
     smtpSecure: boolean("smtp_secure").notNull().default(false),
     smtpUsername: text("smtp_username"),

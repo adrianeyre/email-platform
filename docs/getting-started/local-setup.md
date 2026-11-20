@@ -27,7 +27,7 @@ The variables in `.env` are described in [Environment variables](../reference/en
 ## Send your first email
 
 1. Sign in at <http://localhost:4320>.
-2. Open **Delivery**. It starts pointed at `postfix`, the production stack's mail server, which the dev stack doesn't run. For local development, set the SMTP host to `localhost`, the port to `1025`, no TLS and no username, so email is caught by Mailpit at <http://localhost:8025>. The default from address starts as `no-reply@adrianeyre.co.uk`. See [Delivery and access](../guide/delivery-and-access.md).
+2. Open **Delivery**. For local development, set the SMTP host to `localhost`, the port to `1025`, no TLS and no username, so email is caught by Mailpit at <http://localhost:8025>. The default from address starts as `no-reply@adrianeyre.co.uk`. See [Delivery and access](../guide/delivery-and-access.md).
 3. Add the built-in emails, with their Wizzaroo header, footer and configuration:
 
    ```sh

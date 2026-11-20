@@ -10,7 +10,7 @@
 - [Templates](guide/templates.md): the visual designer and its blocks (Socials included), light and dark previews, slugs, headers and footers, configurations and the built-in emails.
 - [Sending](guide/sending.md): `POST /v1/messages` by slug, name or ID, the from address, every field, and idempotency.
 - [Logs](guide/logs.md): every email sent, and how long it is kept.
-- [Delivery and access](guide/delivery-and-access.md): the SMTP provider (Postfix to start, or any other), the default from address, users, API keys and appearance.
+- [Delivery and access](guide/delivery-and-access.md): the SMTP provider, the default from address, users, API keys and appearance.
 - [Accessibility](guide/accessibility.md): WCAG 2.2 AA, and how it is checked.
 - [The email client](../packages/email-client/README.md): the typed Node client.
 
@@ -23,7 +23,7 @@
 ## Running it
 
 - [Deploying](operations/deploying.md): first-time setup and `pnpm deploy:server`.
-- [Sending with Postfix](operations/sending-with-postfix.md): the default SMTP provider, its settings and the DNS records it needs.
+- [Setting up Brevo](operations/setting-up-brevo.md): an SMTP provider step by step, with its DNS records in Cloudflare.
 - [Backups and restore](operations/backups-and-restore.md): nightly encrypted `pg_dump`, sent off the server.
 - [Website, CI and releases](operations/website-ci-and-releases.md): the website and its illustrations, releases and the client package.
 - [Search engines and icons](operations/search-engines-and-icons.md): SEO and device icons for the app and the website.

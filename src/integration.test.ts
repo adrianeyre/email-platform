@@ -43,10 +43,7 @@ import {
   users,
 } from "./lib/schema.js";
 import { sendEmailOverSmtp } from "./sending/delivery.js";
-import {
-  defaultFromAddress,
-  defaultSmtpHost,
-} from "./settings/settings-store.js";
+import { defaultFromAddress } from "./settings/settings-store.js";
 import { applyRetention } from "./sending/retention.js";
 import {
   sendQueuedMessage,
@@ -434,20 +431,7 @@ describe.skipIf(!hasContainerRuntime)("the email app", () => {
       expect(defaultFromAddress).toBe("no-reply@adrianeyre.co.uk");
     });
 
-    it("starts with the Postfix service as the SMTP provider", async () => {
-      const read = await app("GET", "/app/settings");
-      expect(read.json()).toMatchObject({
-        smtpHost: defaultSmtpHost,
-        smtpPort: 587,
-        smtpSecure: false,
-        smtpUsername: null,
-        hasSmtpPassword: false,
-      });
-      expect(defaultSmtpHost).toBe("postfix");
-    });
-
-    it("refuses a test email once the SMTP host is cleared", async () => {
-      await app("PUT", "/app/settings", { smtpHost: "" });
+    it("refuses a test email before an SMTP host is set", async () => {
       const response = await app("POST", "/app/settings/test", {
         to: "me@example.com",
       });
@@ -1302,8 +1286,8 @@ describe.skipIf(!hasContainerRuntime)("the email app", () => {
         ]);
         // A later migration gives an install with no default from address one.
         expect(settingsRow?.defaultFrom).toBe(defaultFromAddress);
-        // And one with no SMTP host sends through the Postfix service.
-        expect(settingsRow?.smtpHost).toBe(defaultSmtpHost);
+        // The Postfix default came and went (ADR 0009), leaving no SMTP host.
+        expect(settingsRow?.smtpHost).toBeNull();
       } finally {
         await older.$client.end();
         await rm(folder, { recursive: true, force: true });

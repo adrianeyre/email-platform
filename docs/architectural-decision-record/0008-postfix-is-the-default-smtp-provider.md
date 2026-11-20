@@ -1,5 +1,7 @@
 # Postfix is the default SMTP provider
 
+**Status:** superseded by [ADR 0009](0009-postfix-removed-in-favour-of-a-hosted-provider.md). The Postfix service and its default were removed.
+
 A new install could not send anything until someone signed up with a hosted provider, verified a domain with it and typed its details into Delivery. The owner wanted email to work as soon as the stack is up, while still being able to switch to a hosted provider later.
 
 ## Decision
@@ -15,6 +17,6 @@ This amends [ADR 0002](0002-live-delivery-relays-through-an-upstream-provider.md
 ## Consequences
 
 - Delivering from a home IP is unreliable. Residential IPs are often on blocklists such as the Spamhaus PBL, their reverse DNS can't usually be set, and a changing IP breaks SPF. Gmail and Outlook may junk or refuse these emails. Switching to a hosted provider, or setting `POSTFIX_RELAYHOST`, is the fix when that matters.
-- The sender domain needs SPF, DKIM and DMARC records for this server ([Sending with Postfix](../operations/sending-with-postfix.md)), and outgoing port 25 must be open.
+- The sender domain needs SPF, DKIM and DMARC records for this server (the guide was removed with ADR 0009), and outgoing port 25 must be open.
 - Bounces are seen in `docker compose logs postfix`, not in the app's log: the app logs an email as `sent` once Postfix accepts it.
 - Local development and the tests still use Mailpit, so Delivery has to be pointed at it there.

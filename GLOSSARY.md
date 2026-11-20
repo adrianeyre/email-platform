@@ -28,7 +28,7 @@
 : Settings shared by Templates: a name, a from email address and a from name. A Template using one is sent from `From name <from email address>` when the send request gives no from address. The built-in "Wizzaroo" Configuration sends from `Wizzaroo <no-reply@wizzaroo.adrianeyre.co.uk>`.
 
 **Delivery**
-: The page for the Settings below: the SMTP provider (Postfix on a new install), default from address (`no-reply@adrianeyre.co.uk` on a new install) and log retention.
+: The page for the Settings below: the SMTP provider, default from address (`no-reply@adrianeyre.co.uk` on a new install) and log retention.
 
 **Appearance**
 : The colour mode (System, Light or Dark) and theme (Sky, Grape, Forest, Sunset, Berry or Lagoon) chosen on the Settings page from the account menu. It is saved in the browser, not on the server.
@@ -43,7 +43,7 @@
 : The single set of options for the app: the SMTP provider (host, port, TLS, username and the encrypted password), the default from address, and the log retention in days.
 
 **SMTP provider**
-: The mail service the worker hands each Message to. A new install uses the Postfix service in the Compose stack; it can be changed to any other, such as Amazon SES SMTP or Postmark, or Mailpit in development.
+: The mail service the worker hands each Message to, such as Amazon SES SMTP, Postmark or Mailpit in development.
 
 **Retention**
 : How many days Messages are kept. A daily job deletes older ones.

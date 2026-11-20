@@ -72,44 +72,7 @@ services:
   worker:
     <<: *app
     command: ["dist/src/index.js", "worker"]
-    depends_on:
-      <<: *after-migrate
-      postfix:
-        condition: service_healthy
-
-  # The default SMTP provider: a Postfix mail server that delivers email
-  # straight to recipients' mail servers (ADR 0008). A new install's Delivery
-  # settings point at it (host `postfix`, port 587, no TLS, no username), so
-  # nothing else needs setting up; set another provider in Delivery to use
-  # that instead. Only the worker reaches it, on the Compose network; it is
-  # never published.
-  postfix:
-    image: boky/postfix:5.2.1-alpine
-    restart: unless-stopped
-    environment:
-      # Space-separated domains the app may send from, such as
-      # "adrianeyre.co.uk wizzaroo.adrianeyre.co.uk". Postfix refuses others.
-      ALLOWED_SENDER_DOMAINS: "${POSTFIX_SENDER_DOMAINS:-adrianeyre.co.uk wizzaroo.adrianeyre.co.uk}"
-      # The name Postfix greets other mail servers with, such as
-      # mail.adrianeyre.co.uk. It should resolve to the server's public IP;
-      # left empty, it is the container's own name.
-      POSTFIX_myhostname: ${POSTFIX_HOSTNAME:-}
-      # Signs every email with DKIM, using a key made on first start for each
-      # sender domain and kept in the postfix-dkim volume. Its DNS record is
-      # in `docker compose exec postfix sh -c 'cat /var/lib/rspamd/dkim/*.txt'`.
-      DKIM_AUTOGENERATE: "true"
-      DKIM_SELECTOR: ${POSTFIX_DKIM_SELECTOR:-mail}
-      # Optional: hand mail on to another server instead of delivering it
-      # directly, such as [smtp-relay.brevo.com]:587.
-      RELAYHOST: ${POSTFIX_RELAYHOST:-}
-      RELAYHOST_USERNAME: ${POSTFIX_RELAYHOST_USERNAME:-}
-      RELAYHOST_PASSWORD: ${POSTFIX_RELAYHOST_PASSWORD:-}
-    volumes:
-      - postfix-dkim:/var/lib/rspamd/dkim
-      # Mail waiting to be delivered survives restarts.
-      - postfix-spool:/var/spool/postfix
-    networks:
-      - default
+    depends_on: *after-migrate
 
   backup:
     build: ./backup
@@ -161,5 +124,3 @@ networks:
 
 volumes:
   postgres-data:
-  postfix-dkim:
-  postfix-spool:
