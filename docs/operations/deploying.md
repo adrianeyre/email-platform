@@ -5,10 +5,11 @@ The platform runs on one Linux home server under Docker Compose ([ADR 0003](../a
 ## First time
 
 1. Install Docker (with the Compose plugin), Node 26 and pnpm 12, and clone the repository.
-2. Copy `.env.example` to `.env` and fill in the production values: `POSTGRES_PASSWORD`, `APP_URL`, `ENCRYPTION_KEY` (`openssl rand -base64 32`) and the backup settings (see [Backups and restore](backups-and-restore.md)). Every variable the stack needs and does not default is marked `:?` in `docker-compose.yml`, so `docker compose config` names any that are missing.
+2. Copy `.env.example` to `.env` and fill in the production values: `POSTGRES_PASSWORD`, `APP_URL`, `ENCRYPTION_KEY` (`openssl rand -base64 32`) the backup settings (see [Backups and restore](backups-and-restore.md)) and `POSTFIX_SENDER_DOMAINS` (see [Sending with Postfix](sending-with-postfix.md)). Every variable the stack needs and does not default is marked `:?` in `docker-compose.yml`, so `docker compose config` names any that are missing.
 3. Run `pnpm deploy:server`.
 4. Create the first user: `docker compose run --rm -it api dist/src/index.js cli user:create you@example.com`.
-5. Sign in at `APP_URL`, set the SMTP provider under **Delivery**, check the default from address (it starts as `no-reply@adrianeyre.co.uk`), and use **Send a test email**.
+5. Add the DNS records Postfix needs for each sender domain ([Sending with Postfix](sending-with-postfix.md#dns-records)).
+6. Sign in at `APP_URL`. **Delivery** starts pointed at Postfix; change it only to use a hosted provider. Check the default from address (it starts as `no-reply@adrianeyre.co.uk`) and use **Send a test email**.
 
 ## Every deploy
 
@@ -32,12 +33,13 @@ The script exits non-zero on any failure. Set `DEPLOY_HEALTH_URL` if the API is 
 
 ## What runs
 
-| Service    | Role                                     | Reached from                         |
-| ---------- | ---------------------------------------- | ------------------------------------ |
-| `api`      | UI, REST API and `/docs` on port 4320    | LAN and tailnet                      |
-| `worker`   | Sends queued emails and deletes old logs | Nothing (outgoing SMTP only)         |
-| `migrate`  | Applies migrations, then exits           | —                                    |
-| `postgres` | Database and job queue                   | The internal `database` network only |
-| `backup`   | Nightly encrypted backups                | —                                    |
+| Service    | Role                                                     | Reached from                            |
+| ---------- | -------------------------------------------------------- | --------------------------------------- |
+| `api`      | UI, REST API and `/docs` on port 4320                    | LAN and tailnet                         |
+| `worker`   | Sends queued emails and deletes old logs                 | Nothing (outgoing SMTP only)            |
+| `postfix`  | The default SMTP provider: DKIM-signs and delivers email | The worker, on the Compose network only |
+| `migrate`  | Applies migrations, then exits                           | —                                       |
+| `postgres` | Database and job queue                                   | The internal `database` network only    |
+| `backup`   | Nightly encrypted backups                                | —                                       |
 
-Data lives on the `postgres-data` volume, so it survives `docker compose down` and restarts. Only `docker compose down --volumes` removes it.
+Data lives on the `postgres-data` volume, and Postfix's DKIM keys and mail queue on `postfix-dkim` and `postfix-spool`, so they survive `docker compose down` and restarts. Only `docker compose down --volumes` removes it.

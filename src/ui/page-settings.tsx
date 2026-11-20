@@ -87,6 +87,7 @@ const SettingsEditor = ({ initial }: { initial: unknown }) => {
               update({ smtpHost });
             }}
             placeholder="smtp.example.com"
+            hint="A new install starts with postfix, the mail server that runs beside the app: port 587, no TLS and no username. Change it to use another provider."
           />
           <TextField
             label="Port"
