@@ -1,0 +1,202 @@
+/* The features grid's pictures. Each fills its tile's picture slot, which
+   owns the crop (references/bento.md, rule 8). */
+.ef-fit {
+  width: 100%;
+}
+
+.ef {
+  & .ss-stage {
+    overflow: hidden;
+    background: transparent;
+  }
+
+  /* ---- Logs: the one window in the grid, pinned and bleeding ---- */
+
+  .ef-window {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% + 80px);
+    height: 340px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  .ef-table {
+    display: grid;
+    background: var(--ss-surface);
+    height: 100%;
+  }
+
+  .ef-row {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1.1fr) minmax(0, 1.4fr) 96px;
+    gap: 16px;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--ss-line-faint);
+  }
+
+  .ef-row--head {
+    min-height: 34px;
+    color: var(--ss-text-faint);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom-color: var(--ss-line);
+  }
+
+  .ef-row--new {
+    background: var(--ss-accent-soft);
+    transition: background 0.6s ease;
+  }
+
+  .ef-row--new[data-on] {
+    background: transparent;
+  }
+
+  .ef-cell {
+    color: var(--ss-text);
+    font-size: 12px;
+    line-height: 1.3;
+  }
+
+  .ef-cell--strong {
+    color: var(--ss-text-strong);
+    font-weight: 600;
+  }
+
+  .ef-cell--faint {
+    color: var(--ss-text-faint);
+  }
+
+  /* Narrow: status and recipient only, so no real words run off the crop. */
+  &.ef-logs--narrow .ef-row {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  /* ---- Preview: the switch over a small email ---- */
+
+  .ef-seg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 172px;
+  }
+
+  .ef-seg-item {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .ef-mail {
+    position: absolute;
+    top: 52px;
+    left: 0;
+    display: grid;
+    gap: 9px;
+    width: 250px;
+    padding: 18px 20px 96px;
+    border: 1px solid #dbe5f6;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: var(--ss-shadow-ground);
+    transition: filter 0.45s ease;
+  }
+
+  .ef-mail[data-dark] {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  .ef-mail-brand {
+    color: #1c2f8c;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .ef-mail-title {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  /* Strong enough to stay visible once the dark preview inverts them. */
+  .ef-mail .ef-mail-bar {
+    background: #cbd5e1;
+  }
+
+  .ef-mail-button {
+    justify-self: start;
+    margin-top: 4px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    background: #2563eb;
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  /* ---- Socials: the collection, off the right and bottom ---- */
+
+  .ef-icons {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(6, 40px);
+    gap: 14px;
+  }
+
+  .ef-icon {
+    display: inline-flex;
+    line-height: 0;
+  }
+
+  /* ---- Slug: the field, its check and how an app uses it ---- */
+
+  .ef-slug-card {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: grid;
+    gap: 12px;
+    width: min(100%, 300px);
+  }
+
+  .ef-slug-hint {
+    min-height: 22px;
+  }
+
+  .ef-faint {
+    color: var(--ss-text-faint);
+    font-size: 12px;
+  }
+
+  .ef-code {
+    display: block;
+    justify-self: start;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #0f172a;
+    color: #e2e8f0;
+    font-family: var(--ss-mono);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: nowrap;
+  }
+
+  .ef-code-key {
+    color: #93c5fd;
+  }
+
+  .ef-code-value {
+    color: #86efac;
+  }
+}

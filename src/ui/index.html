@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en-GB" dir="ltr">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Email Template - Design, send and track email templates</title>
+    <meta
+      name="description"
+      content="Design email templates with a visual designer, share headers and footers between them, send from your apps with one REST call through your own SMTP provider, and see every email sent."
+    />
+    <meta name="application-name" content="Email Platform" />
+    <meta name="author" content="Adrian Eyre" />
+    <meta name="generator" content="Email Platform" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="canonical" href="__APP_URL__/" />
+
+    <!-- Colour -->
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="theme-color"
+      content="#f3f7fe"
+      media="(prefers-color-scheme: light)"
+    />
+    <meta
+      name="theme-color"
+      content="#0b1222"
+      media="(prefers-color-scheme: dark)"
+    />
+
+    <!-- Icons: every browser, iOS, Android, Windows and Safari pinned tabs -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#1d4ed8" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Email" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="msapplication-TileColor" content="#1d4ed8" />
+    <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+
+    <!-- Sharing: Open Graph (Facebook, LinkedIn, Slack, WhatsApp, Discord) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Email Platform" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:url" content="__APP_URL__/" />
+    <meta
+      property="og:title"
+      content="Email Platform · Design, send and track email templates"
+    />
+    <meta
+      property="og:description"
+      content="A visual email designer, shared headers and footers, a REST API, your own SMTP provider and a log of every email."
+    />
+    <meta property="og:image" content="__APP_URL__/og-image.png" />
+    <meta property="og:image:secure_url" content="__APP_URL__/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="Email Platform: Design email templates. Send them from your apps."
+    />
+
+    <!-- Sharing: X (Twitter) -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta
+      name="twitter:title"
+      content="Email Platform · Design, send and track email templates"
+    />
+    <meta
+      name="twitter:description"
+      content="A visual email designer, shared headers and footers, a REST API, your own SMTP provider and a log of every email."
+    />
+    <meta name="twitter:image" content="__APP_URL__/og-image.png" />
+    <meta
+      name="twitter:image:alt"
+      content="Email Platform: Design email templates. Send them from your apps."
+    />
+
+    <!-- Search engines: structured data -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "Email Platform",
+        "url": "__APP_URL__/",
+        "image": "__APP_URL__/og-image.png",
+        "description": "Design email templates with a visual designer, share headers and footers, send from your apps with one REST call through your own SMTP provider, and see every email sent.",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Any",
+        "browserRequirements": "Requires JavaScript",
+        "inLanguage": "en-GB",
+        "isAccessibleForFree": true,
+        "accessibilityAPI": "ARIA",
+        "accessibilityControl": [
+          "fullKeyboardControl",
+          "fullMouseControl",
+          "fullTouchControl"
+        ],
+        "author": { "@type": "Person", "name": "Adrian Eyre" },
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "GBP" }
+      }
+    </script>
+
+    <!-- Apply the saved colour mode and theme before the first paint, so pages never flash the wrong colours. -->
+    <script>
+      (() => {
+        try {
+          const saved = JSON.parse(
+            localStorage.getItem("email-platform.appearance") || "{}",
+          );
+          const root = document.documentElement;
+          if (["system", "light", "dark"].includes(saved.colourMode))
+            root.dataset.colourMode = saved.colourMode;
+          if (
+            ["sky", "grape", "forest", "sunset", "berry", "lagoon"].includes(
+              saved.themeName,
+            )
+          )
+            root.dataset.theme = saved.themeName;
+        } catch {}
+      })();
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <p style="font-family: system-ui, sans-serif; padding: 1rem">
+        Email Platform needs JavaScript to run. Turn it on in your browser to
+        sign in.
+      </p>
+    </noscript>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

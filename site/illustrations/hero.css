@@ -1,0 +1,362 @@
+/* The hero: corner bleed (references/framing.md). One gutter top and left;
+   the designer runs off the right and bottom. */
+.eh {
+  & .ss-stage {
+    --gutter: 32px;
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--ss-well);
+  }
+
+  .eh-window {
+    position: absolute;
+    top: var(--gutter);
+    left: var(--gutter);
+    width: 800px;
+    height: 440px;
+    box-shadow: var(--ss-shadow-hero);
+  }
+
+  .eh-app {
+    display: grid;
+    grid-template-columns: 148px minmax(0, 1fr) 200px;
+    height: 100%;
+    background: var(--ss-surface);
+  }
+
+  /* ---- Palette ---- */
+
+  .eh-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 12px;
+    border-right: 1px solid var(--ss-line);
+  }
+
+  .eh-panel-title {
+    color: var(--ss-text-faint);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    line-height: 1.3;
+    text-transform: uppercase;
+  }
+
+  .eh-panel-title--outline {
+    margin-top: 8px;
+  }
+
+  .eh-tiles {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .eh-tile {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    gap: 6px;
+    height: 50px;
+    border: 1px solid var(--ss-line);
+    border-radius: 8px;
+    color: var(--ss-accent);
+    background: var(--ss-surface);
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+  }
+
+  .eh-tile[data-hover],
+  .eh-tile[data-pressed] {
+    border-color: var(--ss-accent);
+    background: var(--ss-accent-soft);
+  }
+
+  .eh-tile-label {
+    color: var(--ss-text-strong);
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .eh-outline {
+    margin-left: 4px;
+  }
+
+  /* ---- Centre: toolbar and the email ---- */
+
+  .eh-center {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .eh-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--ss-line);
+  }
+
+  .eh-seg {
+    width: 76px;
+  }
+
+  .eh-canvas {
+    flex: 1;
+    padding: 16px 46px 0;
+    background: var(--ep-email-ground);
+  }
+
+  /* The email stays the light email it is, in either theme, as in the app. */
+  .eh-email {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 18px 22px;
+    border: 1px solid #dbe5f6;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #1f2937;
+  }
+
+  .eh-brand {
+    color: var(--ep-brand);
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+  }
+
+  .eh-heading {
+    color: #0f172a;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .eh-para {
+    display: grid;
+    gap: 9px;
+    padding: 2px 0;
+  }
+
+  .eh-para .ss-bar {
+    background: #e2e8f0;
+  }
+
+  .eh-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .eh-var {
+    padding: 1px 4px;
+    border-radius: 4px;
+    background: #f3e8ff;
+    color: #7e22ce;
+    font-family: var(--ss-mono);
+    font-size: 10px;
+    line-height: 1.4;
+  }
+
+  .eh-button {
+    align-self: flex-start;
+    padding: 8px 14px;
+    border-radius: 6px;
+    background: var(--ep-email-button);
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .eh-rule {
+    height: 1px;
+    margin-top: 4px;
+    background: #e5e7eb;
+  }
+
+  .eh-block {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    padding: 6px;
+    border-radius: 6px;
+    outline: 2px solid transparent;
+    outline-offset: -2px;
+    transition: outline-color 0.2s ease;
+  }
+
+  /* The designer's own selection outline. */
+  .eh-block[data-selected] {
+    outline-color: var(--ss-accent);
+  }
+
+  .eh-social {
+    display: inline-flex;
+    line-height: 0;
+  }
+
+  .eh-note {
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .eh-note .ss-bar {
+    background: #eef2f7;
+  }
+
+  /* ---- Inspector: filler the crop cuts ---- */
+
+  .eh-inspector {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 14px 12px;
+    border-left: 1px solid var(--ss-line);
+  }
+
+  /* ---- The terminal: the one satellite ---- */
+
+  .eh-terminal {
+    position: absolute;
+    top: 150px;
+    right: var(--gutter);
+    z-index: 20;
+    width: 236px;
+    height: 178px;
+    box-shadow: var(--ss-shadow-satellite);
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    will-change: transform;
+    transition:
+      opacity 0.3s ease,
+      transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .eh-terminal[data-show] {
+    opacity: 1;
+    transform: none;
+  }
+
+  .eh-terminal .ss-term {
+    font-size: 10px;
+    line-height: 1.55;
+  }
+
+  .eh-cmd {
+    padding-left: 2ch;
+    color: #cbd5e1;
+    white-space: pre;
+  }
+
+  .eh-out {
+    margin-top: 4px;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+  }
+
+  .eh-out[data-show] {
+    opacity: 1;
+  }
+
+  .eh-rest {
+    position: absolute;
+    left: 360px;
+    top: 120px;
+  }
+
+  /* ---- Compact: a phone column, 358 wide ----
+     A second design, not a squeeze: the designer fits the column and runs
+     off the bottom only; the terminal comes forward over the email's heading,
+     leaving the button and the new Socials row in view. */
+
+  & .ss-stage[data-layout="compact"] {
+    --gutter: 16px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-window {
+    width: 326px;
+    height: 420px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-app {
+    grid-template-columns: 60px minmax(0, 1fr);
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-palette {
+    padding: 10px 8px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-panel-title,
+  & .ss-stage[data-layout="compact"] .eh-outline {
+    display: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-tile {
+    height: 40px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-tile .ss-bar {
+    display: none;
+  }
+
+  /* Four tiles: enough to read as a palette, with Socials well inside the crop. */
+  & .ss-stage[data-layout="compact"] .eh-tile:nth-child(4),
+  & .ss-stage[data-layout="compact"] .eh-tile:nth-child(5) {
+    display: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-tile[data-target] {
+    height: 48px;
+    gap: 4px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-tile-label {
+    font-size: 10px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-topbar {
+    height: 46px;
+    padding: 0 10px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-canvas {
+    padding: 12px 12px 0;
+  }
+
+  /* Tall enough that the email always runs off the bottom, never stopping just short of it. */
+  & .ss-stage[data-layout="compact"] .eh-email {
+    min-height: 320px;
+    padding: 14px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-terminal {
+    top: 84px;
+    right: var(--gutter);
+    left: var(--gutter);
+    width: auto;
+    height: 134px;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-cmd--to {
+    display: none;
+  }
+
+  & .ss-stage[data-layout="compact"] .eh-rest {
+    left: 220px;
+    top: 72px;
+  }
+}
