@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/adrianeyre/email-platform/compare/v1.0.1...v1.1.0) (2026-11-20)
+
+### Features
+
+* send through a built-in Postfix server by default ([c064a94](https://github.com/adrianeyre/email-platform/commit/c064a943b1694c326a3ec013eaf8b0eee1231c49))
+
 ## [1.0.1](https://github.com/adrianeyre/email-platform/compare/v1.0.0...v1.0.1) (2026-11-20)
 
 ### Bug Fixes
