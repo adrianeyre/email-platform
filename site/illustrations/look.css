@@ -1,0 +1,94 @@
+/*
+ * Email Platform's own look for the Stageshow kit: the Sky theme from
+ * src/ui/appearance.ts (page, surfaces, borders, accent) and the app's type,
+ * radii and shadows from src/ui/styles.css. Every stage on the site uses it,
+ * so the illustrations read as the product rather than a generic mock.
+ */
+.ep-look .ss-stage {
+  --ss-canvas: #f3f7fe;
+  --ss-surface: #ffffff;
+  --ss-chrome: #ffffff;
+  --ss-raised: #ffffff;
+  --ss-well: #e3ecfc;
+  --ss-fill: #e2e8f0;
+
+  --ss-ink-1: rgb(15 23 42 / 4%);
+  --ss-ink-2: rgb(15 23 42 / 7%);
+  --ss-ink-3: rgb(15 23 42 / 10%);
+  --ss-ink-4: rgb(15 23 42 / 13%);
+  --ss-ink-5: rgb(15 23 42 / 18%);
+
+  --ss-line: #d5e1f7;
+  --ss-line-faint: #e6eefb;
+
+  --ss-text-strong: #0f172a;
+  --ss-text: #475569;
+  --ss-text-faint: #64748b;
+  --ss-icon: #475569;
+  --ss-icon-faint: #94a3b8;
+
+  --ss-accent: #1d4ed8;
+  --ss-accent-soft: #dbeafe;
+  --ss-accent-text: #1e40af;
+  --ss-success-text: #166534;
+  --ss-success-soft: #dcfce7;
+
+  --ss-font:
+    system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif;
+  --ss-mono:
+    ui-monospace, "SFMono-Regular", "Cascadia Code", Menlo, Consolas, monospace;
+
+  --ss-radius-sm: 6px;
+  --ss-radius-md: 8px;
+  --ss-radius-lg: 10px;
+  --ss-radius-window: 12px;
+
+  --ss-shadow-hero:
+    0 0 0 1px rgb(15 23 42 / 6%), 0 30px 60px -18px rgb(29 78 216 / 28%),
+    0 18px 36px -18px rgb(15 23 42 / 22%);
+  --ss-shadow-satellite:
+    0 0 0 1px rgb(15 23 42 / 8%), 0 18px 36px -10px rgb(15 23 42 / 35%),
+    0 4px 10px -4px rgb(15 23 42 / 18%);
+
+  /* Email Platform's own colours, for what the kit has no token for. */
+  --ep-handlebars: #7e22ce;
+  --ep-handlebars-soft: #f3e8ff;
+  --ep-email-ground: #eff6ff;
+  --ep-brand: #1c2f8c;
+  --ep-email-button: #2563eb;
+}
+
+.ep-look .ss-stage[data-theme="dark"] {
+  --ss-canvas: #0b1222;
+  --ss-surface: #141d31;
+  --ss-chrome: #141d31;
+  --ss-raised: #1c2740;
+  --ss-well: #070d1a;
+  --ss-fill: #2b3a5a;
+
+  --ss-ink-1: rgb(232 237 246 / 5%);
+  --ss-ink-2: rgb(232 237 246 / 8%);
+  --ss-ink-3: rgb(232 237 246 / 11%);
+  --ss-ink-4: rgb(232 237 246 / 15%);
+  --ss-ink-5: rgb(232 237 246 / 22%);
+
+  --ss-line: #2b3a5a;
+  --ss-line-faint: #1f2b45;
+
+  --ss-text-strong: #e8edf6;
+  --ss-text: #aab4c6;
+  --ss-text-faint: #8391a7;
+  --ss-icon: #aab4c6;
+  --ss-icon-faint: #4b5b78;
+
+  --ss-accent: #7cb4fb;
+  --ss-accent-soft: #1e3358;
+  --ss-accent-text: #a5cbfd;
+  --ss-success-text: #86efac;
+  --ss-success-soft: #0e2a1a;
+
+  --ep-handlebars: #d8b4fe;
+  --ep-handlebars-soft: #3b2257;
+  --ep-email-ground: #1c2740;
+}

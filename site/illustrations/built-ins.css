@@ -1,0 +1,108 @@
+.eb {
+  & .ss-stage {
+    overflow: hidden;
+    border-radius: 16px;
+    background: var(--ss-well);
+  }
+
+  /* Five columns of 184 with 16 between, offset up and left so every edge
+     cuts a tile by a third or more. */
+  .eb-grid {
+    position: absolute;
+    top: -96px;
+    left: -116px;
+    display: grid;
+    grid-template-columns: repeat(5, 184px);
+    gap: 16px;
+  }
+
+  /* The thumbnail runs flush to the tile's top and sides, the label row under it. */
+  .eb-tile {
+    display: grid;
+    gap: 10px;
+    overflow: hidden;
+    padding: 0 0 12px;
+    border-radius: 12px;
+    background: var(--ss-surface);
+    box-shadow: var(--ss-shadow-card);
+  }
+
+  .eb-tile[data-focus] {
+    position: relative;
+    z-index: 1;
+    box-shadow:
+      var(--ss-shadow-hero),
+      0 0 0 1.5px var(--ss-accent);
+  }
+
+  .eb-thumb {
+    display: grid;
+    align-content: start;
+    gap: 13px;
+    height: 120px;
+    padding: 16px 12px;
+    border-radius: 0;
+    background: var(--ss-ink-1);
+  }
+
+  /* A tiny email: the email stays light, as it is sent. */
+  .eb-thumb--focus {
+    gap: 7px;
+    background: #ffffff;
+    box-shadow: inset 0 -1px 0 #dbe5f6;
+  }
+
+  .eb-brand {
+    color: #1c2f8c;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.3;
+  }
+
+  .eb-title {
+    color: #0f172a;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1.3;
+  }
+
+  .eb-line {
+    width: 86%;
+    height: 5px;
+    border-radius: 3px;
+    background: #e2e8f0;
+  }
+
+  .eb-line--short {
+    width: 58%;
+  }
+
+  .eb-button {
+    width: 54px;
+    height: 14px;
+    margin-top: 3px;
+    border-radius: 4px;
+    background: #2563eb;
+  }
+
+  .eb-meta {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 20px;
+    /* On the thumbnail's text edge, so the card has one left edge. */
+    padding: 0 4px 0 12px;
+  }
+
+  .eb-name {
+    color: var(--ss-text-strong);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Narrow: the same grid, shifted so the focus tile sits in the middle. */
+  & .ss-stage[data-layout="compact"] .eb-grid {
+    left: -321px;
+  }
+}
