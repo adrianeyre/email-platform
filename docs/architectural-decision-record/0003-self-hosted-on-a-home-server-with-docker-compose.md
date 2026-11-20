@@ -1,7 +1,10 @@
 # Self-hosted on a home server with Docker Compose
 
+**Status:** amended by [ADR 0008](0008-postfix-is-the-default-smtp-provider.md): Postfix in the Compose stack is the default SMTP provider.
+
 The app runs on a single Linux home server under Docker Compose, not on managed cloud services. It's for the owner's own projects, so running cost and simplicity matter more than elastic scale. Every stateful piece is chosen so it runs in one Compose file:
 
+- **Postfix** as a container is the default SMTP provider ([ADR 0008](0008-postfix-is-the-default-smtp-provider.md)).
 - **Postgres** as a container is the only database, and it holds everything: users, API keys, templates, settings, the send log and attachments still waiting to be sent.
 - **Queues are Postgres-backed jobs** (pg-boss), not a separate broker, so a job is committed in the same transaction as the Message it belongs to.
 - **Nothing is exposed to the internet.** The UI and API are reached over the home network or tailnet. No router ports are opened.
