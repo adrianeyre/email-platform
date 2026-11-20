@@ -1,3 +1,9 @@
+## [1.2.0](https://github.com/adrianeyre/email-platform/compare/v1.1.0...v1.2.0) (2026-11-20)
+
+### Features
+
+* remove the built-in Postfix server and document setting up Brevo ([cf9a3fe](https://github.com/adrianeyre/email-platform/commit/cf9a3fee6ba5ce2d318e49a7db512edbbdbc9786))
+
 ## [1.1.0](https://github.com/adrianeyre/email-platform/compare/v1.0.1...v1.1.0) (2026-11-20)
 
 ### Features
