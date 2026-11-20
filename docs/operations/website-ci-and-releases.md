@@ -2,7 +2,7 @@
 
 ## The website
 
-`site/` is the project website, published to GitHub Pages at <https://adrianeyre.github.io/email-template/>. `.github/workflows/pages.yml` builds and publishes it when it, the screenshots or the icons change on `main`. Set the repository variable `SITE_DOMAIN` to publish it at a custom domain; the build writes it to `CNAME`.
+`site/` is the project website, published to GitHub Pages at <https://email-platform.adrianeyre.co.uk/>. `.github/workflows/pages.yml` builds and publishes it when it, the screenshots or the icons change on `main`. Set the repository variable `SITE_DOMAIN` to publish it at a custom domain; the build writes it to `CNAME`.
 
 | Command             | Does                                                                                     |
 | ------------------- | ---------------------------------------------------------------------------------------- |

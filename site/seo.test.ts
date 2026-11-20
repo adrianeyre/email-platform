@@ -10,7 +10,7 @@ import {
 } from "./seo.ts";
 
 const page = readFileSync(join(import.meta.dirname, "index.html"), "utf8");
-const siteUrl = "https://adrianeyre.github.io/email-template";
+const siteUrl = "https://adrianeyre.github.io/email-platform";
 
 describe("the project website", () => {
   it("has a title and description search engines show in full", () => {

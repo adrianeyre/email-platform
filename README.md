@@ -4,7 +4,7 @@
 
 **Design email templates. Send them from your apps with one call.**
 
-[Website](https://adrianeyre.github.io/email-template/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-template/releases)
+[Website](https://email-platform.adrianeyre.co.uk/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-platform/releases)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/illustrations/hero-dark.png" />
