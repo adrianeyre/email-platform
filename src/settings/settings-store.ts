@@ -4,7 +4,6 @@ import { settings, type SettingsRow } from "../lib/schema.js";
 import { decryptValue, encryptValue } from "../lib/secrets.js";
 
 export { defaultFromAddress } from "./default-from.js";
-export { defaultSmtpHost } from "./default-smtp.js";
 
 export interface SmtpSettings {
   host: string;
