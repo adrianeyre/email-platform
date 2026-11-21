@@ -1,3 +1,9 @@
+## [1.3.0](https://github.com/adrianeyre/email-platform/compare/v1.2.0...v1.3.0) (2026-11-21)
+
+### Features
+
+* the first pen-test round and the hardening it brought ([27a0fe8](https://github.com/adrianeyre/email-platform/commit/27a0fe887e58a028682f34dda9da8929fe5c936d))
+
 ## 1.0.0 (2026-11-20)
 
 ### Features
