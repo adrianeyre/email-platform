@@ -1,14 +1,16 @@
 import { eq } from "drizzle-orm";
 import type { Database } from "../lib/database.js";
-import { describeError } from "../lib/http.js";
 import { messageAttachments, messages } from "../lib/schema.js";
 import { readSettings, readSmtpSettings } from "../settings/settings-store.js";
-import { isPermanentSmtpFailure, type SendEmail } from "./delivery.js";
+import type { SendEmail } from "./delivery.js";
+import { classifySendFailure, SendSettingsError } from "./send-failure.js";
 
 export interface SendWorkerParts {
   database: Database;
   encryptionKey: Buffer;
   sendEmail: SendEmail;
+  /** Told of each failed try, for the server's own log: the Message keeps only the failure's class (#173). */
+  onSendFailed?: (messageId: string, error: unknown) => void;
 }
 
 export interface RetryState {
@@ -18,7 +20,7 @@ export interface RetryState {
 
 export type SendOutcome = "sent" | "failed" | "skipped";
 
-export class SmtpNotConfiguredError extends Error {
+export class SmtpNotConfiguredError extends SendSettingsError {
   override name = "SmtpNotConfiguredError";
 }
 
@@ -26,8 +28,15 @@ export class SendWillBeRetriedError extends Error {
   override name = "SendWillBeRetriedError";
 }
 
+/**
+ * What a Message stops keeping once it is sent or has finally failed: its body. Nothing reads the body after the
+ * provider has it, and a failed Message is never sent again, so keeping it would only keep the links in it (#116).
+ * Its attachments go too, in the same transaction.
+ */
+const droppedBody = { html: null, text: null } as const;
+
 export const sendQueuedMessage = async (
-  { database, encryptionKey, sendEmail }: SendWorkerParts,
+  { database, encryptionKey, sendEmail, onSendFailed }: SendWorkerParts,
   messageId: string,
   retry: RetryState,
 ): Promise<SendOutcome> => {
@@ -65,6 +74,7 @@ export const sendQueuedMessage = async (
       await transaction
         .update(messages)
         .set({
+          ...droppedBody,
           status: "sent",
           attempts,
           error: null,
@@ -78,15 +88,17 @@ export const sendQueuedMessage = async (
     });
     return "sent";
   } catch (error) {
-    const isFinal =
-      isPermanentSmtpFailure(error) || retry.retryCount >= retry.retryLimit;
+    onSendFailed?.(message.id, error);
+    // The Message keeps the failure's class, never the provider's reply or Node's network error (#173, #184).
+    const failure = classifySendFailure(error);
+    const isFinal = failure.isPermanent || retry.retryCount >= retry.retryLimit;
     await database.transaction(async (transaction) => {
       await transaction
         .update(messages)
         .set({
           attempts,
-          error: describeError(error),
-          ...(isFinal ? { status: "failed" } : {}),
+          error: failure.summary,
+          ...(isFinal ? { ...droppedBody, status: "failed" } : {}),
         })
         .where(eq(messages.id, message.id));
       if (isFinal) {
@@ -98,6 +110,6 @@ export const sendQueuedMessage = async (
     if (isFinal) {
       return "failed";
     }
-    throw new SendWillBeRetriedError(describeError(error), { cause: error });
+    throw new SendWillBeRetriedError(failure.summary, { cause: error });
   }
 };

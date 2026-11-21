@@ -103,8 +103,21 @@ const responses: Record<string, { status: number; body: unknown }> = {
       status: "failed",
       error: "connect ECONNREFUSED",
       to: ["ada@example.com"],
-      html: "<p>Hi Ada</p>",
-      text: "Hi Ada",
+      isBodyKept: false,
+      html: null,
+      text: null,
+    },
+  },
+  "/app/messages/m2": {
+    status: 200,
+    body: {
+      id: "m2",
+      subject: "Hi Grace",
+      status: "queued",
+      to: ["grace@example.com"],
+      isBodyKept: true,
+      html: "<p>Hi Grace</p>",
+      text: "Hi Grace",
     },
   },
   "/app/api-keys": { status: 200, body: { apiKeys: [] } },
@@ -223,6 +236,40 @@ describe("the app", () => {
     },
   );
 
+  it("says on the Delivery page when the saved SMTP password can't be read with ENCRYPTION_KEY (#167)", async () => {
+    const unreadable = {
+      status: 200,
+      body: {
+        smtpHost: "smtp.example.com",
+        smtpPort: 587,
+        smtpSecure: false,
+        smtpUsername: "user",
+        hasSmtpPassword: true,
+        isSmtpPasswordUnreadable: true,
+        defaultFrom: "App <app@example.com>",
+        logRetentionDays: 90,
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: string) => {
+        const response =
+          input === "/app/settings"
+            ? unreadable
+            : (responses[input] ?? { status: 404, body: {} });
+        return Promise.resolve(
+          new Response(JSON.stringify(response.body), {
+            status: response.status,
+          }),
+        );
+      }),
+    );
+    const text = await renderAt("/delivery");
+    expect(text).toContain(
+      "A password is saved, but it can't be read with this server's ENCRYPTION_KEY",
+    );
+  });
+
   it("titles the sign-in page with the prefix first", async () => {
     vi.stubGlobal(
       "fetch",
@@ -263,6 +310,20 @@ describe("the app", () => {
       "<style data-preview-scheme>",
     );
     expect(frame()?.getAttribute("srcdoc")).toContain("<p>Hi Ada</p>");
+  });
+
+  it("shows a queued email's body, and says a sent or failed one's isn't kept (#116)", async () => {
+    const queued = await renderAt("/logs/m2");
+    expect(
+      host
+        .querySelector<HTMLIFrameElement>("iframe.preview-frame")
+        ?.getAttribute("srcdoc"),
+    ).toBe("<p>Hi Grace</p>");
+    expect(queued).toContain("Hi Grace");
+
+    const failed = await renderAt("/logs/m1");
+    expect(host.querySelector("iframe.preview-frame")).toBeNull();
+    expect(failed).toContain("isn't kept once it has been sent or has failed");
   });
 
   it("shows a template's slug, and explains one that breaks the rule", async () => {

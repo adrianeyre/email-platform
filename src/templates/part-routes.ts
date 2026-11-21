@@ -1,11 +1,18 @@
 import { and, asc, eq, inArray, or } from "drizzle-orm";
 import { Type, type Static } from "typebox";
+import {
+  applicationIdField,
+  changedBy,
+  chooseOwner,
+  ownedByCaller,
+} from "../access/applications.js";
 import type { Database } from "../lib/database.js";
 import {
   isUniqueViolation,
   NotFoundError,
   RejectedRequestError,
   ValidationFailedError,
+  largeBodyLimit,
   type Server,
 } from "../lib/http.js";
 import {
@@ -16,7 +23,11 @@ import {
   type TemplateRow,
 } from "../lib/schema.js";
 import { composeHtml } from "./compose.js";
-import { renderTemplate, TemplateRenderFailedError } from "./render.js";
+import {
+  RenderedContentTooLongError,
+  renderTemplate,
+  TemplateRenderFailedError,
+} from "./render.js";
 
 const variablesRecord = Type.Record(Type.String(), Type.Unknown());
 
@@ -30,6 +41,7 @@ const partBody = Type.Object(
       }),
     ),
     sampleVariables: Type.Optional(variablesRecord),
+    applicationId: applicationIdField,
   },
   { additionalProperties: false },
 );
@@ -126,7 +138,13 @@ const rejectUnrenderable = (
   } catch (error) {
     if (error instanceof TemplateRenderFailedError) {
       throw new ValidationFailedError([
-        { field: "html", message: `It does not render: ${error.message}` },
+        {
+          field: "html",
+          message:
+            error instanceof RenderedContentTooLongError
+              ? error.message
+              : `It does not render: ${error.message}`,
+        },
       ]);
     }
     throw error;
@@ -190,13 +208,31 @@ const registerPartRoutes = (
 
   server.post(
     path,
-    { schema: { summary: `Create a ${label}`, tags: [tag], body: partBody } },
+    {
+      bodyLimit: largeBodyLimit,
+      schema: {
+        summary: `Create a ${label}`,
+        description: `The ${label} belongs to the API Key's Application, so only that Application's keys can change or delete it.`,
+        tags: [tag],
+        body: partBody,
+      },
+    },
     async (request, reply) => {
       rejectUnrenderable(request.body.html, request.body.sampleVariables ?? {});
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        request.body.applicationId,
+      );
       try {
         const [row] = await database
           .insert(emailParts)
-          .values({ ...toValues(request.body), kind })
+          .values({
+            ...toValues(request.body),
+            ...owner,
+            ...changedBy(request),
+            kind,
+          })
           .returning();
         return await reply.code(201).send(row);
       } catch (error) {
@@ -208,9 +244,10 @@ const registerPartRoutes = (
   server.put(
     `${path}/:id`,
     {
+      bodyLimit: largeBodyLimit,
       schema: {
         summary: `Replace a ${label}`,
-        description: `Every Template using this ${label} sends with the new one straight away.`,
+        description: `Every Template using this ${label} sends with the new one straight away. Only a ${label} of the API Key's own Application can be replaced; any other answers 404, as an unknown ID does.`,
         tags: [tag],
         params: idParams,
         body: partBody,
@@ -218,14 +255,25 @@ const registerPartRoutes = (
     },
     async (request) => {
       rejectUnrenderable(request.body.html, request.body.sampleVariables ?? {});
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        request.body.applicationId,
+      );
       try {
         const [row] = await database
           .update(emailParts)
-          .set({ ...toValues(request.body), updatedAt: new Date() })
+          .set({
+            ...toValues(request.body),
+            ...owner,
+            ...changedBy(request),
+            updatedAt: new Date(),
+          })
           .where(
             and(
               eq(emailParts.id, request.params.id),
               eq(emailParts.kind, kind),
+              ownedByCaller(emailParts.applicationId, request.apiKey),
             ),
           )
           .returning();
@@ -244,7 +292,7 @@ const registerPartRoutes = (
     {
       schema: {
         summary: `Delete a ${label}`,
-        description: `Templates using it are sent without a ${label}.`,
+        description: `Templates using it are sent without a ${label}. Only a ${label} of the API Key's own Application can be deleted; any other answers 404, as an unknown ID does.`,
         tags: [tag],
         params: idParams,
       },
@@ -253,7 +301,11 @@ const registerPartRoutes = (
       const deleted = await database
         .delete(emailParts)
         .where(
-          and(eq(emailParts.id, request.params.id), eq(emailParts.kind, kind)),
+          and(
+            eq(emailParts.id, request.params.id),
+            eq(emailParts.kind, kind),
+            ownedByCaller(emailParts.applicationId, request.apiKey),
+          ),
         )
         .returning({ id: emailParts.id });
       if (deleted.length === 0) {

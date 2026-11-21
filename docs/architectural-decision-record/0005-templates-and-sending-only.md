@@ -4,7 +4,7 @@ The platform had grown to about 30,000 lines across around 15 feature areas: Wor
 
 We cut the app down to that core (issues #70 to #80):
 
-- **One install, one tenant.** Users sign in with an email and password stored as scrypt hashes in Postgres. Every user has full rights.
+- **One install, one tenant.** Users sign in with an email and password stored as scrypt hashes in Postgres. Every user has full rights. That stops being true before Wizzaroo adds a second School or another Application is given an API Key, and is up for review on 2027-05-21 ([ADR 0011](0011-every-user-has-full-rights-until-the-second-school.md)).
 - **REST only.** `POST /v1/messages` with an API key. There is no SMTP relay.
 - **One SMTP provider**, configured in Settings with its password encrypted. Sends are queued in pg-boss and retried 3 times.
 - **Simple Templates:** subject, HTML, optional text and required variables, with no versions, locales, partials or visual builder.
@@ -17,3 +17,5 @@ We cut the app down to that core (issues #70 to #80):
 - An install that needs several isolated tenants needs several installs.
 - Tracking, unsubscribe handling, bounce suppression and inbound mail, if needed, come from the SMTP provider or a future, deliberate addition.
 - ADR 0001 is superseded. ADR 0002 now describes SMTP delivery.
+- API Keys no longer have every power: each belongs to an Application and reaches only its own Templates, Headers, Footers, from addresses and Messages ([ADR 0009](0009-api-keys-belong-to-an-application.md)).
+- "Every user has full rights" has an end: [ADR 0011](0011-every-user-has-full-rights-until-the-second-school.md) names when it stops being true and when it is reviewed.

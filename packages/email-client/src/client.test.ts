@@ -82,6 +82,112 @@ describe("createEmailClient", () => {
   });
 });
 
+describe("baseUrl", () => {
+  const templatesFetch = () =>
+    vi
+      .fn<typeof globalThis.fetch>()
+      .mockImplementation(() =>
+        Promise.resolve(jsonResponse(200, { templates: [] })),
+      );
+
+  it("refuses an http: baseUrl on a host other than loopback, before anything is sent", () => {
+    for (const baseUrl of [
+      "http://mail.example.com",
+      "http://192.168.1.20:4320",
+      "http://email.home/",
+      "http://[fe80::1]:4320",
+      "HTTP://MAIL.EXAMPLE.COM",
+    ]) {
+      const fetch = templatesFetch();
+      expect(() =>
+        createEmailClient({ baseUrl, apiKey: "ek_test", fetch }),
+      ).toThrow(/refuses the http: baseUrl .*allowInsecureHttp: true/);
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  });
+
+  it("never puts the API key, or a password in the baseUrl, in the refusal", () => {
+    expect(() =>
+      createEmailClient({
+        baseUrl: "http://user:hunter2@mail.example.com/path",
+        apiKey: "ek_secret",
+      }),
+    ).toThrow(
+      new TypeError(
+        "The email client refuses the http: baseUrl http://mail.example.com: the API key would cross the network in the clear. " +
+          "Use https:, or pass allowInsecureHttp: true for a network you trust as much as the key",
+      ),
+    );
+  });
+
+  it("accepts an http: baseUrl on a host other than loopback when allowInsecureHttp is true", async () => {
+    const fetch = templatesFetch();
+    const client = createEmailClient({
+      baseUrl: "http://192.168.1.20:4320/",
+      apiKey: "ek_test",
+      allowInsecureHttp: true,
+      fetch,
+    });
+    await client.listTemplates();
+    expect(fetch.mock.calls[0]?.[0]).toBe(
+      "http://192.168.1.20:4320/v1/templates",
+    );
+  });
+
+  it("refuses it when allowInsecureHttp is false", () => {
+    expect(() =>
+      createEmailClient({
+        baseUrl: "http://mail.example.com",
+        apiKey: "ek_test",
+        allowInsecureHttp: false,
+      }),
+    ).toThrow(TypeError);
+  });
+
+  it("accepts http: on loopback, whose traffic never leaves the machine", async () => {
+    for (const baseUrl of [
+      "http://localhost:4320",
+      "http://app.localhost:4320",
+      "http://127.0.0.1:4320",
+      "http://127.8.9.10",
+      "http://[::1]:4320",
+    ]) {
+      const fetch = templatesFetch();
+      await createEmailClient({
+        baseUrl,
+        apiKey: "ek_test",
+        fetch,
+      }).listTemplates();
+      expect(fetch).toHaveBeenCalledOnce();
+    }
+  });
+
+  it("accepts https: on any host", async () => {
+    const fetch = templatesFetch();
+    await createEmailClient({
+      baseUrl: "https://192.168.1.20:4320",
+      apiKey: "ek_test",
+      fetch,
+    }).listTemplates();
+    expect(fetch).toHaveBeenCalledOnce();
+  });
+
+  it("refuses a baseUrl that isn't an absolute https: or http: URL, even with allowInsecureHttp", () => {
+    expect(() =>
+      createEmailClient({ baseUrl: "mail.example.com", apiKey: "ek_test" }),
+    ).toThrow("must be an absolute URL");
+    for (const baseUrl of ["ftp://mail.example.com", "file:///tmp/x"]) {
+      expect(() =>
+        createEmailClient({
+          baseUrl,
+          apiKey: "ek_test",
+          allowInsecureHttp: true,
+        }),
+      ).toThrow("must be https: or http:");
+    }
+  });
+});
+
 describe("send", () => {
   it("sends a template by name with the API key and variables", async () => {
     const { client, sent } = setUp();

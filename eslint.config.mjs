@@ -12,6 +12,8 @@ export default defineConfig(
       "packages/*/dist",
       // The Stageshow kit and its filming tools, vendored as published.
       "site/stageshow",
+      // Claude Code's agent worktrees: whole checkouts of their own, already in .gitignore.
+      ".claude",
     ],
   },
   eslint.configs.recommended,

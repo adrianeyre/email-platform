@@ -22,7 +22,6 @@ import {
 import {
   createContext,
   useContext,
-  useRef,
   useState,
   type CSSProperties,
   type DragEvent,
@@ -51,7 +50,7 @@ import {
   type LeafBlock,
   type SocialBlock,
 } from "../../templates/design/model.js";
-import { safeColor } from "../../templates/design/render-html.js";
+import { safeColor, safeFont } from "../../templates/design/render-html.js";
 import {
   socialIcons,
   socialIconSvg,
@@ -256,7 +255,10 @@ const ButtonPreview = ({ block }: { block: ButtonBlock }) => {
     display: block.isFullWidth ? "block" : "inline-block",
     background: safeColor(block.buttonColor, "#2563eb"),
     color: safeColor(block.textColor, "#ffffff"),
-    fontFamily: block.fontFamily || design.settings.fontFamily,
+    fontFamily: safeFont(
+      block.fontFamily,
+      safeFont(design.settings.fontFamily),
+    ),
     fontSize: block.fontSize,
     fontWeight: block.isBold ? 700 : 400,
     fontStyle: block.isItalic ? "italic" : "normal",
@@ -361,7 +363,7 @@ const SocialPreview = ({ block }: { block: SocialBlock }) => {
           title={link.url.trim() || "No address: left out of the email"}
           style={{
             color: safeColor(design.settings.textColor, "#1f2937"),
-            fontFamily: design.settings.fontFamily,
+            fontFamily: safeFont(design.settings.fontFamily),
             fontSize: Math.max(12, Math.min(18, block.iconSize * 0.45)),
           }}
         >
@@ -381,27 +383,21 @@ const SocialPreview = ({ block }: { block: SocialBlock }) => {
   );
 };
 
-/** Custom HTML is shown in a frame that runs no scripts, sized to its content. */
+/**
+ * Custom HTML is shown in a frame that runs no scripts and shares no origin with the app, like the previews (#155).
+ * The app can't read such a frame to fit it to its content, so it starts at a set height the author can drag.
+ */
 const HtmlPreview = ({ html }: { html: string }) => {
-  const frameRef = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(40);
   const { design } = useDesigner();
-  const measure = () => {
-    const body = frameRef.current?.contentDocument?.body;
-    if (body !== undefined) {
-      setHeight(Math.max(24, body.scrollHeight));
-    }
-  };
   return (
-    <iframe
-      ref={frameRef}
-      title="Custom HTML"
-      className="html-block-frame"
-      sandbox="allow-same-origin"
-      style={{ height }}
-      onLoad={measure}
-      srcDoc={`<!doctype html><html><head><style>body{margin:0;font-family:${design.settings.fontFamily};font-size:${String(design.settings.fontSize)}px;color:${safeColor(design.settings.textColor)};}</style></head><body>${html}</body></html>`}
-    />
+    <div className="html-block-frame-box">
+      <iframe
+        title="Custom HTML"
+        className="html-block-frame"
+        sandbox=""
+        srcDoc={`<!doctype html><html><head><style>body{margin:0;font-family:${safeFont(design.settings.fontFamily)};font-size:${String(design.settings.fontSize)}px;color:${safeColor(design.settings.textColor)};}</style></head><body>${html}</body></html>`}
+      />
+    </div>
   );
 };
 
@@ -784,25 +780,18 @@ export interface LockedPart {
   html: string;
 }
 
-/** A Header or Footer shown in line with the email, but edited on its own page. */
+/**
+ * A Header or Footer shown in line with the email, but edited on its own page. Its frame is sandbox="" like the
+ * previews (#155), so the app can't read its height: it starts at a set height the author can drag.
+ */
 const LockedPartView = ({ part }: { part: LockedPart }) => {
-  const frameRef = useRef<HTMLIFrameElement>(null);
-  const [height, setHeight] = useState(48);
   return (
     <div className="locked-part">
       <iframe
-        ref={frameRef}
         title={part.label}
         className="locked-part-frame"
-        sandbox="allow-same-origin"
+        sandbox=""
         tabIndex={-1}
-        style={{ height }}
-        onLoad={() => {
-          const body = frameRef.current?.contentDocument?.body;
-          if (body !== undefined) {
-            setHeight(Math.max(24, body.scrollHeight));
-          }
-        }}
         srcDoc={part.html}
       />
       <a
@@ -892,7 +881,7 @@ export const Designer = ({
 
   const { settings } = design;
   const canvasStyle = {
-    "--email-font": settings.fontFamily,
+    "--email-font": safeFont(settings.fontFamily),
     "--email-size": `${String(settings.fontSize)}px`,
     "--email-line": String(settings.lineHeight),
     "--email-text": safeColor(settings.textColor, "#1f2937"),

@@ -1,0 +1,138 @@
+# The pen-test deployment (pen test E1, #87): production's docker-compose.yml, run as its own Compose project with this
+# file merged on top, so a round probes production's own images, services and networks and this file changes only
+# what has to differ. Stand it up with `pnpm pen-test:up` and destroy it, volumes and all, with `pnpm pen-test:down`.
+# Never run it with production's project name or production's .env: docs/pen-test/deployment.md.
+name: email-platform-pen-test
+
+# Its own image tag, so building it never replaces production's email-platform:local on a shared host.
+x-pen-test-image: &pen-test-image email-platform-pen-test:local
+
+services:
+  provision:
+    image: *pen-test-image
+
+  migrate:
+    image: *pen-test-image
+    environment:
+      PEN_TEST_DEPLOYMENT: email-platform-pen-test
+
+  # Published on nothing: testers reach it through `entry`, below, so the api sits on internal networks only.
+  api:
+    image: *pen-test-image
+    environment:
+      PEN_TEST_DEPLOYMENT: email-platform-pen-test
+    ports: !reset []
+
+  worker:
+    image: *pen-test-image
+    environment:
+      PEN_TEST_DEPLOYMENT: email-platform-pen-test
+    depends_on:
+      mailpit:
+        condition: service_started
+
+  # The SMTP provider: a sink that keeps every email and delivers none, on the internal default network. Settings
+  # point at it as `mailpit:1025` once the fixtures are loaded. Hardened as production's services are (pen test I4,
+  # #182), and not root: the image names no user, so it runs as nobody, on ports above 1024, with its mail in /tmp.
+  mailpit:
+    image: axllent/mailpit:v1.33.1@sha256:aef2aacc11f075ec0fb6874275ee4a421e688e11a96ebb296134d1735c7761ce
+    user: "65534:65534"
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,uid=65534,gid=65534,mode=0700
+    mem_limit: 256m
+    pids_limit: 64
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    networks:
+      - default
+
+  # The only container on a network that isn't internal, and the only one with published ports, on 127.0.0.1. It
+  # passes TCP straight through to the api and to Mailpit's UI, adding no header, so the api sees exactly what a
+  # caller sends, X-Forwarded-For included, as it does in production, where nothing stands in front of it. It runs as
+  # the image's nginx user (101), not root, read-only and with no capability (#182): it listens above 1024 and writes
+  # only its pid, to /tmp.
+  entry:
+    image: nginx:1.29-alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de
+    user: "101:101"
+    restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:size=1m,uid=101,gid=101,mode=0700
+      - /var/cache/nginx:size=1m,uid=101,gid=101,mode=0700
+    mem_limit: 64m
+    pids_limit: 32
+    configs:
+      - source: entry
+        target: /etc/nginx/nginx.conf
+    ports:
+      - "127.0.0.1:43320:43320"
+      - "127.0.0.1:43325:43325"
+    networks:
+      - default
+      - entry
+    depends_on:
+      api:
+        condition: service_healthy
+
+  # Makes the throwaway backup remote's folder, owned by the backup image's postgres user, before backup starts.
+  # Root only to chown, so CHOWN is the one capability it keeps (#182).
+  backup-stand-in-folder:
+    build: ./backup
+    user: root
+    network_mode: none
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    command:
+      [
+        "sh",
+        "-c",
+        "mkdir -p /srv/backup-stand-in/email-platform && chown -R postgres:postgres /srv/backup-stand-in",
+      ]
+    volumes:
+      - backup-stand-in:/srv/backup-stand-in
+
+  # Production's backup container, sending to a local rclone remote on a volume of the deployment's own, encrypted
+  # to the deployment's throwaway age key. Its rclone.conf and remote come from .pen-test-deployment/.
+  backup:
+    volumes:
+      - backup-stand-in:/srv/backup-stand-in
+    depends_on:
+      backup-stand-in-folder:
+        condition: service_completed_successfully
+
+  restore:
+    volumes:
+      - backup-stand-in:/srv/backup-stand-in
+
+configs:
+  entry:
+    file: ./src/pen-test/deployment/entry-nginx.conf
+
+networks:
+  # Production's way out. Here it is internal: the api, worker, backup and Mailpit reach each other and nothing else.
+  default:
+    internal: true
+  # The entry proxy's network, the only one that isn't internal, because a published port needs one. It doesn't
+  # masquerade, so even the proxy has no way out to the internet.
+  entry:
+    driver_opts:
+      com.docker.network.bridge.enable_ip_masquerade: "false"
+
+volumes:
+  backup-stand-in:

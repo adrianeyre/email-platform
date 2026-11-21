@@ -31,7 +31,21 @@ const email = createEmailClient({
 });
 ```
 
-`createEmailClient` throws at once if the API key is missing. Without `from` or `defaultFrom`, the app uses the from address of the template's configuration, or else the default from address in its Delivery settings. A `defaultFrom` is sent with every email, so it wins over a template's configuration: leave it out to let the app choose.
+`createEmailClient` throws at once if the API key is missing, or if `baseUrl` is `http:` on a host other than loopback (see below). Without `from` or `defaultFrom`, the app uses the from address of the template's configuration, or else the default from address in its Delivery settings. A `defaultFrom` is sent with every email, so it wins over a template's configuration: leave it out to let the app choose.
+
+## `http:` and `allowInsecureHttp`
+
+The API key goes in every request's `Authorization` header, and a send carries its recipients and variables (reset and invite links included). Over `http:`, anyone on the network path reads them all, and the key can do everything the API can. So the client refuses an `http:` `baseUrl` with a `TypeError`, before anything is sent, unless its host is loopback (`localhost`, `127.x.x.x` or `[::1]`, whose traffic never leaves the machine) or you opt in by name:
+
+```ts
+const email = createEmailClient({
+  baseUrl: "http://email.home:4320", // the self-hosted app on the LAN
+  apiKey: process.env.EMAIL_API_KEY,
+  allowInsecureHttp: true, // the key and every send cross this LAN in the clear
+});
+```
+
+The self-hosted app serves plain HTTP on port 4320, with no TLS in front of it ([ADR 0003](../../docs/architectural-decision-record/0003-self-hosted-on-a-home-server-with-docker-compose.md)), so an Application that reaches it across the LAN has to set `allowInsecureHttp: true`, knowingly: everything on that LAN can read its key. Over the tailnet, WireGuard encrypts the path, but the client can't tell, so a tailnet `http:` address needs the option too. Prefer `https:` wherever the app is behind TLS. Any scheme but `https:` and `http:` is refused, with or without the option.
 
 ## Send a template
 
@@ -137,18 +151,18 @@ await email.sendContent({
 
 | Option           | Notes                                                                 |
 | ---------------- | --------------------------------------------------------------------- |
-| `to`             | A string or an array, 1 to 50 addresses                               |
-| `cc`, `bcc`      | A string or an array, up to 50 each                                   |
+| `to`             | A string or an array, 1 to 50 addresses, one address in each entry    |
+| `cc`, `bcc`      | A string or an array, up to 50 each, one address in each entry        |
 | `from`           | Overrides `defaultFrom`                                               |
 | `replyTo`        | One address                                                           |
 | `attachments`    | `[{ filename, content, contentType? }]`; `content` is bytes or base64 |
 | `idempotencyKey` | Sent as the `Idempotency-Key` header                                  |
 
-The whole message, attachments included, must be 25 MB or less.
+The whole message, attachments included, must be 25 MB or less. Up to 100 attachments, each `filename` 1 to 255 characters and each `contentType` one MIME type of up to 255, such as `application/pdf`; anything else is refused with `422`. A subject may have up to 998 characters, a template's once rendered with its variables, and a template's rendered HTML and text up to 1,000,000 each; a send past them is refused with `422`.
 
 ## Idempotency
 
-Pass an `idempotencyKey`, such as an ID with an event name, to make retries safe. A repeated key returns the first message and doesn't send again:
+Pass an `idempotencyKey`, such as an ID with an event name, to make retries safe. A repeated key with the same message returns the first message and doesn't send again; the same key with a different message is refused with an `EmailApiError` whose `status` is `409` and `code` is `"idempotency_key_reused"`:
 
 ```ts
 await email.send({
@@ -185,6 +199,8 @@ try {
 
 `EmailTimeoutError` is a kind of `EmailNetworkError`.
 
+An API key may send to a limited number of recipient addresses a minute ([the send limit](../../docs/guide/sending.md#the-send-limit)). A send past it throws an `EmailApiError` with `status` `429` and `code` `"too_many_requests"`; nothing was queued, so send it again, with the same `idempotencyKey`, a minute later.
+
 ## Reading
 
 ```ts
@@ -195,4 +211,6 @@ const template = await email.getTemplate(templateId);
 
 ## Publishing
 
-Bump `version` in `package.json` in a pull request. When it merges to `main`, the **Publish email client** workflow typechecks, tests, builds and publishes the package to GitHub Packages. A version that is already published is skipped, so changes that don't bump the version publish nothing. The workflow can also be run by hand from the Actions tab.
+Bump `version` in `package.json` and merge it to `main`, then tag that commit on `main` `email-client-v<version>`, such as `email-client-v0.1.0`, and push the tag. The **Publish email client** workflow builds, tests and packs the package with a read-only token, then, in a separate job in the `email-client` environment that installs nothing, checks that the tag's commit is on `main` and that the tarball's version matches the tag, and publishes it to GitHub Packages. A tag on a commit that isn't on `main`, or whose version doesn't match, publishes nothing; there is no way to publish by hand ([The email client](../../docs/operations/website-ci-and-releases.md#the-email-client)).
+
+The version follows [semver](https://semver.org); while it is `0.x`, a change that can break a caller bumps the minor version. Refusing an `http:` `baseUrl` on a host other than loopback is one: it is in `0.1.0`, the first version published, so no earlier published version behaves otherwise.

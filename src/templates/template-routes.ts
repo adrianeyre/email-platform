@@ -1,5 +1,11 @@
-import { asc, eq, like, or } from "drizzle-orm";
+import { and, asc, eq, like, or } from "drizzle-orm";
 import { Type, type Static } from "typebox";
+import {
+  applicationIdField,
+  changedBy,
+  chooseOwner,
+  ownedByCaller,
+} from "../access/applications.js";
 import type { Database } from "../lib/database.js";
 import {
   findViolatedConstraint,
@@ -7,6 +13,7 @@ import {
   NotFoundError,
   RejectedRequestError,
   ValidationFailedError,
+  largeBodyLimit,
   type Server,
 } from "../lib/http.js";
 import { templates, type TemplateRow } from "../lib/schema.js";
@@ -15,6 +22,7 @@ import { loadTemplateConfiguration } from "./configuration-routes.js";
 import { loadTemplateParts } from "./part-routes.js";
 import {
   normaliseVariableNames,
+  RenderedContentTooLongError,
   renderTemplate,
   TemplateRenderFailedError,
 } from "./render.js";
@@ -65,6 +73,7 @@ const templateBody = Type.Object(
           "The visual designer's blocks. Sending uses only html, so leave this out (or null) when html is written by hand",
       }),
     ),
+    applicationId: applicationIdField,
   },
   { additionalProperties: false },
 );
@@ -207,6 +216,11 @@ const renderOrReject = (
   try {
     return renderTemplate(content, variables);
   } catch (error) {
+    if (error instanceof RenderedContentTooLongError) {
+      throw new ValidationFailedError([
+        { field: error.field, message: error.message },
+      ]);
+    }
     if (error instanceof TemplateRenderFailedError) {
       throw new ValidationFailedError([
         {
@@ -249,8 +263,11 @@ export const registerTemplateRoutes = (
   server.post(
     "/templates",
     {
+      bodyLimit: largeBodyLimit,
       schema: {
         summary: "Create a template",
+        description:
+          "The template belongs to the API Key's Application, so only that Application's keys can change or delete it.",
         tags: ["Templates"],
         body: templateBody,
       },
@@ -258,13 +275,23 @@ export const registerTemplateRoutes = (
     async (request, reply) => {
       const { body } = request;
       checkSlug(body.slug);
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        body.applicationId,
+      );
       await checkTemplate(database, body);
       for (let attempt = 1; ; attempt += 1) {
         const slug = body.slug ?? (await findFreeSlug(database, body.name));
         try {
           const [row] = await database
             .insert(templates)
-            .values({ ...toTemplateValues(body), slug })
+            .values({
+              ...toTemplateValues(body),
+              ...owner,
+              ...changedBy(request),
+              slug,
+            })
             .returning();
           return await reply.code(201).send(row);
         } catch (error) {
@@ -284,8 +311,11 @@ export const registerTemplateRoutes = (
   server.put(
     "/templates/:id",
     {
+      bodyLimit: largeBodyLimit,
       schema: {
         summary: "Replace a template",
+        description:
+          "Only a template of the API Key's own Application can be replaced; any other answers 404, as an unknown ID does.",
         tags: ["Templates"],
         params: idParams,
         body: templateBody,
@@ -294,16 +324,28 @@ export const registerTemplateRoutes = (
     async (request) => {
       const { body } = request;
       checkSlug(body.slug);
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        body.applicationId,
+      );
       await checkTemplate(database, body);
       try {
         const [row] = await database
           .update(templates)
           .set({
             ...toTemplateValues(body),
+            ...owner,
+            ...changedBy(request),
             ...(body.slug === undefined ? {} : { slug: body.slug }),
             updatedAt: new Date(),
           })
-          .where(eq(templates.id, request.params.id))
+          .where(
+            and(
+              eq(templates.id, request.params.id),
+              ownedByCaller(templates.applicationId, request.apiKey),
+            ),
+          )
           .returning();
         if (row === undefined) {
           throw new NotFoundError("The template");
@@ -323,6 +365,8 @@ export const registerTemplateRoutes = (
     {
       schema: {
         summary: "Delete a template",
+        description:
+          "Only a template of the API Key's own Application can be deleted; any other answers 404, as an unknown ID does.",
         tags: ["Templates"],
         params: idParams,
       },
@@ -330,7 +374,12 @@ export const registerTemplateRoutes = (
     async (request) => {
       const deleted = await database
         .delete(templates)
-        .where(eq(templates.id, request.params.id))
+        .where(
+          and(
+            eq(templates.id, request.params.id),
+            ownedByCaller(templates.applicationId, request.apiKey),
+          ),
+        )
         .returning({ id: templates.id });
       if (deleted.length === 0) {
         throw new NotFoundError("The template");
@@ -342,8 +391,11 @@ export const registerTemplateRoutes = (
   server.post(
     "/templates/preview",
     {
+      bodyLimit: largeBodyLimit,
       schema: {
         summary: "Render template content without saving it",
+        description:
+          "Renders the subject, HTML and text with the variables, the Header and Footer around the HTML, as a send would. The same bounds as sending hold: a rendered subject over 998 characters, HTML or text over 1,000,000, a subject, HTML or text holding more than 50,000 characters of Handlebars expressions, or a render doing more work than one may, is refused with 422.",
         tags: ["Templates"],
         body: Type.Object({
           subject: Type.String(),

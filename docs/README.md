@@ -2,7 +2,7 @@
 
 ## Getting started
 
-- [Local setup](getting-started/local-setup.md): prerequisites, running it, sending your first email, installing the Node client from GitHub Packages, and every command.
+- [Local setup](getting-started/local-setup.md): prerequisites, running it, sending your first email, and every command.
 - [Environment variables](reference/environment-variables.md): the four the app reads.
 
 ## Using it
@@ -18,12 +18,13 @@
 
 - [How it fits together](architecture/how-it-fits-together.md): the four roles and the life of an email.
 - [Architectural decision records](architectural-decision-record/): why it is built as it is.
+- [Pen-testing PRD](product-requirements-document/pen-testing.md): the first security round, its hypotheses and findings. Kept private.
+- [Pen test](pen-test/README.md): the findings workflow, the pen-test deployment, its fixtures, the rules of engagement and the findings notes. Kept private.
 - [Glossary](../GLOSSARY.md): the terms used.
 
 ## Running it
 
-- [Deploying](operations/deploying.md): first-time setup and `pnpm deploy:server`.
-- [Setting up Brevo](operations/setting-up-brevo.md): an SMTP provider step by step, with its DNS records in Cloudflare.
+- [Deploying](operations/deploying.md): first-time setup and `sh ops/deploy-server.sh`.
 - [Backups and restore](operations/backups-and-restore.md): nightly encrypted `pg_dump`, sent off the server.
 - [Website, CI and releases](operations/website-ci-and-releases.md): the website and its illustrations, releases and the client package.
 - [Search engines and icons](operations/search-engines-and-icons.md): SEO and device icons for the app and the website.

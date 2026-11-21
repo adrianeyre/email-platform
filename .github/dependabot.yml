@@ -1,0 +1,44 @@
+# Proposes updates as pull requests, which .github/workflows/checks.yml then
+# checks like any other (#179): the npm packages in the pnpm workspace (the
+# app and packages/email-client, one pnpm-lock.yaml) and the SHA-pinned
+# actions in .github/workflows, whose pins never move unless someone moves
+# them. Updates are grouped so a week's arrive as a few reviewable pull
+# requests, and a new release waits a week before it is proposed, so a
+# hijacked release has time to be found and pulled first. Security updates
+# (a repository setting: docs/operations/website-ci-and-releases.md) are
+# proposed as soon as an advisory is published, whatever the schedule.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - "/"
+      - "/packages/email-client"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: build
+      include: scope
+    groups:
+      production:
+        dependency-type: production
+        update-types: [minor, patch]
+      development:
+        dependency-type: development
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: ci
+    groups:
+      actions:
+        patterns: ["*"]

@@ -1,0 +1,182 @@
+# Checks every pull request before it can reach main: lint, typecheck,
+# Prettier, the tests (Testcontainers included, on the runner's Docker),
+# `pnpm audit` and GitHub's dependency review. These are the only place the
+# checks run: the deploy (ops/deploy-server.sh) installs nothing and runs no
+# check on the production host (#178), so a failing test or a package with a
+# known advisory must be found here, at review.
+#
+# `pull_request` only, never `pull_request_target`: the code under review
+# runs with a read-only token and no secrets, even from a fork. Node and pnpm
+# come from the pins in package.json. The audit fails on `high` and
+# `critical` advisories (docs/operations/website-ci-and-releases.md).
+name: Checks
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+# A new push to a pull request cancels the checks still running for the old
+# one.
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          cache: true
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          cache: true
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Typecheck the email client
+        run: pnpm --filter @adrianeyre/email-client typecheck
+
+  prettier:
+    name: Prettier
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          cache: true
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Prettier
+        run: pnpm prettier
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    # Testcontainers pulls Postgres and Mailpit on first use.
+    timeout-minutes: 30
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          cache: true
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # CI is set on the runner, so the coverage thresholds in
+      # vitest.config.ts apply.
+      - name: Test
+        run: pnpm test
+
+      - name: Test the email client
+        run: pnpm --filter @adrianeyre/email-client test
+
+  # Reads the advisories for every package in pnpm-lock.yaml, the whole tree
+  # and not only the manifests. Nothing is installed, so no dependency code
+  # runs.
+  audit:
+    name: Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: package.json
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+
+      - name: Audit
+        run: pnpm audit --audit-level high
+
+  # GitHub's review of the dependencies the pull request adds or changes,
+  # read from its dependency graph through the API, so nothing is checked
+  # out. The audit above is the check that reads the whole lockfile.
+  #
+  # Runs only while the repository is public: on a private one without GitHub
+  # Code Security the dependency graph API answers 404 and the job would fail
+  # every pull request. Skipped, it reports success, so the ruleset's required
+  # "Dependency review" check is still met; the audit is the gate either way.
+  dependency-review:
+    name: Dependency review
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Review dependencies
+        uses: actions/dependency-review-action@bbc44d14a204704ccc493733616cd1e93a0321ec # v5.0.1
+        with:
+          fail-on-severity: high
+          fail-on-scopes: runtime, development

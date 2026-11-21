@@ -1,6 +1,6 @@
 {
-  "id": "639cb971-470b-4713-8ed2-1be66040688c",
-  "prevId": "f2235079-89e7-4d37-8216-3e235b78a079",
+  "id": "04f8ff18-380b-493e-a7cc-b0c17288b75b",
+  "prevId": "b8d15d51-0746-49c3-aede-ca83c866f983",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -18,6 +18,12 @@
         "name": {
           "name": "name",
           "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "application_id": {
+          "name": "application_id",
+          "type": "uuid",
           "primaryKey": false,
           "notNull": true
         },
@@ -48,7 +54,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "api_keys_application_id_applications_id_fk": {
+          "name": "api_keys_application_id_applications_id_fk",
+          "tableFrom": "api_keys",
+          "tableTo": "applications",
+          "columnsFrom": [
+            "application_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "restrict",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "api_keys_lookup_id_unique": {
@@ -56,6 +76,47 @@
           "nullsNotDistinct": false,
           "columns": [
             "lookup_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.applications": {
+      "name": "applications",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "applications_name_unique": {
+          "name": "applications_name_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "name"
           ]
         }
       },
@@ -79,6 +140,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true
+        },
+        "application_id": {
+          "name": "application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "from_email": {
           "name": "from_email",
@@ -109,7 +176,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "configurations_application_id_applications_id_fk": {
+          "name": "configurations_application_id_applications_id_fk",
+          "tableFrom": "configurations",
+          "tableTo": "applications",
+          "columnsFrom": [
+            "application_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "configurations_name_unique": {
@@ -147,6 +228,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "application_id": {
+          "name": "application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "html": {
           "name": "html",
           "type": "text",
@@ -182,7 +269,21 @@
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "email_parts_application_id_applications_id_fk": {
+          "name": "email_parts_application_id_applications_id_fk",
+          "tableFrom": "email_parts",
+          "tableTo": "applications",
+          "columnsFrom": [
+            "application_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "email_parts_kind_name_unique": {
@@ -294,6 +395,18 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "application_id": {
+          "name": "application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "api_key_id": {
+          "name": "api_key_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
         },
         "template_id": {
           "name": "template_id",
@@ -423,6 +536,32 @@
         }
       },
       "foreignKeys": {
+        "messages_application_id_applications_id_fk": {
+          "name": "messages_application_id_applications_id_fk",
+          "tableFrom": "messages",
+          "tableTo": "applications",
+          "columnsFrom": [
+            "application_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
+        "messages_api_key_id_api_keys_id_fk": {
+          "name": "messages_api_key_id_api_keys_id_fk",
+          "tableFrom": "messages",
+          "tableTo": "api_keys",
+          "columnsFrom": [
+            "api_key_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "messages_template_id_templates_id_fk": {
           "name": "messages_template_id_templates_id_fk",
           "tableFrom": "messages",
@@ -439,10 +578,11 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "messages_idempotency_key_unique": {
-          "name": "messages_idempotency_key_unique",
+        "messages_application_idempotency_key_unique": {
+          "name": "messages_application_idempotency_key_unique",
           "nullsNotDistinct": false,
           "columns": [
+            "application_id",
             "idempotency_key"
           ]
         }
@@ -620,6 +760,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "application_id": {
+          "name": "application_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "subject": {
           "name": "subject",
           "type": "text",
@@ -693,6 +839,19 @@
       },
       "indexes": {},
       "foreignKeys": {
+        "templates_application_id_applications_id_fk": {
+          "name": "templates_application_id_applications_id_fk",
+          "tableFrom": "templates",
+          "tableTo": "applications",
+          "columnsFrom": [
+            "application_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        },
         "templates_header_id_email_parts_id_fk": {
           "name": "templates_header_id_email_parts_id_fk",
           "tableFrom": "templates",

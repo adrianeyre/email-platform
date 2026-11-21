@@ -1,5 +1,5 @@
 {
-  "id": "f2235079-89e7-4d37-8216-3e235b78a079",
+  "id": "b8d15d51-0746-49c3-aede-ca83c866f983",
   "prevId": "48081663-3de5-481e-b565-46a0a2265159",
   "version": "7",
   "dialect": "postgresql",
@@ -53,10 +53,10 @@
       "uniqueConstraints": {
         "api_keys_lookup_id_unique": {
           "name": "api_keys_lookup_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "lookup_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -114,10 +114,10 @@
       "uniqueConstraints": {
         "configurations_name_unique": {
           "name": "configurations_name_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -187,11 +187,11 @@
       "uniqueConstraints": {
         "email_parts_kind_name_unique": {
           "name": "email_parts_kind_name_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "kind",
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -251,24 +251,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "message_attachments_message_id_messages_id_fk": {
           "name": "message_attachments_message_id_messages_id_fk",
           "tableFrom": "message_attachments",
-          "tableTo": "messages",
           "columnsFrom": [
             "message_id"
           ],
+          "tableTo": "messages",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -402,9 +402,9 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         },
         "messages_status_idx": {
           "name": "messages_status_idx",
@@ -417,34 +417,34 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "messages_template_id_templates_id_fk": {
           "name": "messages_template_id_templates_id_fk",
           "tableFrom": "messages",
-          "tableTo": "templates",
           "columnsFrom": [
             "template_id"
           ],
+          "tableTo": "templates",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "messages_idempotency_key_unique": {
           "name": "messages_idempotency_key_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "idempotency_key"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -493,24 +493,24 @@
             }
           ],
           "isUnique": false,
-          "concurrently": false,
+          "with": {},
           "method": "btree",
-          "with": {}
+          "concurrently": false
         }
       },
       "foreignKeys": {
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
@@ -534,8 +534,7 @@
           "name": "smtp_host",
           "type": "text",
           "primaryKey": false,
-          "notNull": false,
-          "default": "'postfix'"
+          "notNull": false
         },
         "smtp_port": {
           "name": "smtp_port",
@@ -697,58 +696,58 @@
         "templates_header_id_email_parts_id_fk": {
           "name": "templates_header_id_email_parts_id_fk",
           "tableFrom": "templates",
-          "tableTo": "email_parts",
           "columnsFrom": [
             "header_id"
           ],
+          "tableTo": "email_parts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "templates_footer_id_email_parts_id_fk": {
           "name": "templates_footer_id_email_parts_id_fk",
           "tableFrom": "templates",
-          "tableTo": "email_parts",
           "columnsFrom": [
             "footer_id"
           ],
+          "tableTo": "email_parts",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         },
         "templates_configuration_id_configurations_id_fk": {
           "name": "templates_configuration_id_configurations_id_fk",
           "tableFrom": "templates",
-          "tableTo": "configurations",
           "columnsFrom": [
             "configuration_id"
           ],
+          "tableTo": "configurations",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "set null"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "templates_name_unique": {
           "name": "templates_name_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "name"
-          ]
+          ],
+          "nullsNotDistinct": false
         },
         "templates_slug_unique": {
           "name": "templates_slug_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "slug"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -792,10 +791,10 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
       },
       "policies": {},
@@ -805,10 +804,10 @@
   },
   "enums": {},
   "schemas": {},
+  "views": {},
   "sequences": {},
   "roles": {},
   "policies": {},
-  "views": {},
   "_meta": {
     "columns": {},
     "schemas": {},

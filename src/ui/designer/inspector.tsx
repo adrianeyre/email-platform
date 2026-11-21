@@ -733,7 +733,7 @@ export const Inspector = ({
           value={block.showIf}
           isMono
           placeholder="variableName"
-          hint="Wraps the block in {{#if …}}. Leave empty to always show it."
+          hint="A variable name such as isVip or user.isVip; the block is wrapped in {{#if …}}. Anything else is left out. Leave empty to always show it."
           onChange={(showIf) => {
             update({ showIf: showIf.replaceAll(/[{}#]/gu, "") }, "showIf");
           }}

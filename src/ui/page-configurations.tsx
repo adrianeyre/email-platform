@@ -16,6 +16,7 @@ import {
   useActionRunner,
 } from "./ui-parts.js";
 import { useApiData } from "./use-api-data.js";
+import { ApplicationPicker } from "./application-picker.js";
 
 const api = "/app/configurations";
 
@@ -84,6 +85,8 @@ interface ConfigurationForm {
   name: string;
   fromEmail: string;
   fromName: string;
+  /** The Application whose API Keys may send from it, or "" for none (ADR 0009). */
+  applicationId: string;
 }
 
 const ConfigurationEditor = ({
@@ -104,13 +107,17 @@ const ConfigurationEditor = ({
     setStatus("");
   };
   const save = () => {
+    const body = {
+      ...form,
+      applicationId: form.applicationId === "" ? null : form.applicationId,
+    };
     runAction(
       () =>
         configurationId === undefined
-          ? requestJson(api, { method: "POST", body: form })
+          ? requestJson(api, { method: "POST", body })
           : requestJson(`${api}/${configurationId}`, {
               method: "PUT",
-              body: form,
+              body,
             }),
       (result) => {
         if (configurationId === undefined) {
@@ -235,6 +242,17 @@ const ConfigurationEditor = ({
           placeholder="My App"
           autoComplete="off"
         />
+        <ApplicationPicker
+          value={form.applicationId}
+          onChange={(applicationId) => {
+            update({ applicationId });
+          }}
+          hints={{
+            none: "No API key can send from this address unless it is the default from address.",
+            owned:
+              "This application's API keys can send from this address. Other applications' keys can't.",
+          }}
+        />
         <FailureNotice error={error} />
         <div className="actions">
           <button
@@ -281,7 +299,7 @@ export const ConfigurationPage = ({
     return (
       <ConfigurationEditor
         configurationId={undefined}
-        initial={{ name: "", fromEmail: "", fromName: "" }}
+        initial={{ name: "", fromEmail: "", fromName: "", applicationId: "" }}
         usedBy={[]}
       />
     );
@@ -302,6 +320,7 @@ export const ConfigurationPage = ({
         name: readText(configuration.data, "name"),
         fromEmail: readText(configuration.data, "fromEmail"),
         fromName: readText(configuration.data, "fromName"),
+        applicationId: readText(configuration.data, "applicationId"),
       }}
       usedBy={readRecords(configuration.data, "usedBy").map((row) => ({
         id: readText(row, "id"),

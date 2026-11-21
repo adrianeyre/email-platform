@@ -10,7 +10,7 @@ Follow [Local setup](README.md#local-setup) in the README. Docker must be runnin
 
 ## Checks
 
-Run these before every push. The pre-commit hook runs lint, Prettier and the tests.
+Run these before every push. The pre-commit hook runs lint, Prettier and the tests. Every pull request runs them again in `.github/workflows/checks.yml`, with `pnpm audit` and GitHub's dependency review ([Checks every pull request](docs/operations/website-ci-and-releases.md#checks-every-pull-request)). That is the last time they run before a deploy: the server builds and runs the images and runs no check ([Deploying](docs/operations/deploying.md)).
 
 ```sh
 pnpm typecheck
@@ -41,4 +41,5 @@ The release updates `CHANGELOG.md` and `package.json`, tags `v<version>` and cre
 - **Schema changes** go in `src/lib/schema.ts`, followed by `pnpm db:generate --name <change>`. Never edit an applied migration.
 - **Secrets** are never stored or returned in plain text. Passwords use scrypt, API keys and session tokens are stored as SHA-256 hashes, and the SMTP password is encrypted with AES-256-GCM.
 - **Keep it small.** This app does templates and sending. A new feature needs a reason that fits that scope. Record big decisions as an ADR in `docs/architectural-decision-record/`.
+- **Workflows** pin every action by full commit SHA with its version in a comment, set `persist-credentials: false` on every checkout, and give a write scope only to a job that installs and runs no dependency code ([Pinned actions](docs/operations/website-ci-and-releases.md#pinned-actions)). Dependabot proposes updates to the packages and the pins.
 - Use the terms in [GLOSSARY.md](GLOSSARY.md).

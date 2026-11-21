@@ -27,6 +27,8 @@ export interface TemplateForm {
   footerId: string;
   /** The Configuration ID, or "" for none. */
   configurationId: string;
+  /** The Application whose API Keys can change it, or "" for none (ADR 0009). */
+  applicationId: string;
 }
 
 export const blankTemplateForm: TemplateForm = {
@@ -42,6 +44,7 @@ export const blankTemplateForm: TemplateForm = {
   headerId: "",
   footerId: "",
   configurationId: "",
+  applicationId: "",
 };
 
 export const readTemplateForm = (template: unknown): TemplateForm => ({
@@ -61,6 +64,7 @@ export const readTemplateForm = (template: unknown): TemplateForm => ({
   headerId: readText(template, "headerId"),
   footerId: readText(template, "footerId"),
   configurationId: readText(template, "configurationId"),
+  applicationId: readText(template, "applicationId"),
 });
 
 /** The form after the name changes: a slug that follows the name changes with it. */
@@ -141,6 +145,7 @@ export const buildTemplateBody = (
   headerId: form.headerId === "" ? null : form.headerId,
   footerId: form.footerId === "" ? null : form.footerId,
   configurationId: form.configurationId === "" ? null : form.configurationId,
+  applicationId: form.applicationId === "" ? null : form.applicationId,
 });
 
 /** The body for saving a Header or Footer. */
@@ -152,6 +157,7 @@ export const buildPartBody = (
   html: templateHtml(form),
   sampleVariables: samples,
   design: form.design ?? null,
+  applicationId: form.applicationId === "" ? null : form.applicationId,
 });
 
 /** Every name the designer offers as a {{variable}}: the required ones, then any other sample. */

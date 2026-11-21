@@ -1,3 +1,4 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { sql } from "drizzle-orm";
 import { fromDrizzle, PgBoss, type Queue } from "pg-boss";
 import type { Queryable } from "./database.js";
@@ -36,8 +37,38 @@ export class JobNotEnqueuedError extends Error {
   override name = "JobNotEnqueuedError";
 }
 
+/**
+ * The api's and worker's pg-boss. Their roles can't change the schema (#121), so pg-boss neither installs nor migrates
+ * its own (`migrate` does, with {@link createMigratingJobBoss}) and doesn't rebuild bloated indexes, which is DDL too.
+ */
 export const createJobBoss = (databaseUrl: string): PgBoss =>
+  new PgBoss({
+    connectionString: databaseUrl,
+    migrate: false,
+    createSchema: false,
+    reindex: false,
+  });
+
+/** `migrate`'s pg-boss, which installs and migrates the `pgboss` schema as the owner. */
+export const createMigratingJobBoss = (databaseUrl: string): PgBoss =>
   new PgBoss({ connectionString: databaseUrl });
+
+const jobSchemaBuildPollMs = 1_000;
+
+/**
+ * A pg-boss migration can leave index builds for a running instance to finish in the background. Only `migrate` is
+ * allowed to build them, so it waits for them before it exits.
+ */
+export const waitForJobSchemaBuilds = async (boss: PgBoss): Promise<void> => {
+  const isBuilding = async () =>
+    boss.isBamWorking() ||
+    (await boss.getBamStatus()).some(
+      ({ status }) => status === "pending" || status === "in_progress",
+    );
+  while (await isBuilding()) {
+    await delay(jobSchemaBuildPollMs);
+  }
+};
 
 export const createJobQueues = async (boss: PgBoss): Promise<void> => {
   for (const name of queueNames) {

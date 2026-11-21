@@ -34,14 +34,29 @@ export const isSecretMatch = (
 const passwordKeyBytes = 64;
 const passwordSaltBytes = 16;
 const passwordHashScheme = "scrypt";
-const passwordOptions = { N: 16_384, r: 8, p: 1 } as const;
+export interface PasswordHashCost {
+  N: number;
+  r: number;
+  p: number;
+}
+
+/**
+ * scrypt's cost for every new password hash: OWASP's minimum (Password Storage Cheat Sheet), N=2^17, r=8, p=1, about
+ * 128 MiB and 170 ms a hash (pen test A1, #140). A stored hash carries the cost it was made with, so an older, cheaper
+ * hash still matches, and a successful sign-in hashes the password again at this cost (`isPasswordHashOutdated`).
+ */
+export const passwordHashCost: PasswordHashCost = { N: 2 ** 17, r: 8, p: 1 };
+
+/** The most memory one scrypt may take: twice what this cost needs. Node's own default (32 MiB) is too small for it. */
+const maxScryptMemory = 2 * 128 * passwordHashCost.N * passwordHashCost.r;
 
 const deriveKey = (
   password: string,
   salt: Buffer,
-  options: ScryptOptions,
+  cost: PasswordHashCost,
 ): Promise<Buffer> =>
   new Promise((resolveKey, rejectKey) => {
+    const options: ScryptOptions = { ...cost, maxmem: maxScryptMemory };
     scrypt(password, salt, passwordKeyBytes, options, (error, key) => {
       if (error === null) {
         resolveKey(key);
@@ -53,21 +68,18 @@ const deriveKey = (
 
 export const hashPassword = async (password: string): Promise<string> => {
   const salt = randomBytes(passwordSaltBytes);
-  const key = await deriveKey(password, salt, passwordOptions);
+  const key = await deriveKey(password, salt, passwordHashCost);
   return [
     passwordHashScheme,
-    String(passwordOptions.N),
-    String(passwordOptions.r),
-    String(passwordOptions.p),
+    String(passwordHashCost.N),
+    String(passwordHashCost.r),
+    String(passwordHashCost.p),
     salt.toString("base64url"),
     key.toString("base64url"),
   ].join("$");
 };
 
-export const isPasswordMatch = async (
-  password: string,
-  passwordHash: string,
-): Promise<boolean> => {
+const readPasswordHash = (passwordHash: string) => {
   const [scheme, cost, blockSize, parallelism, salt, expected] =
     passwordHash.split("$");
   if (
@@ -75,17 +87,37 @@ export const isPasswordMatch = async (
     salt === undefined ||
     expected === undefined
   ) {
+    return undefined;
+  }
+  return {
+    cost: { N: Number(cost), r: Number(blockSize), p: Number(parallelism) },
+    salt: Buffer.from(salt, "base64url"),
+    expectedKey: Buffer.from(expected, "base64url"),
+  };
+};
+
+export const isPasswordMatch = async (
+  password: string,
+  passwordHash: string,
+): Promise<boolean> => {
+  const stored = readPasswordHash(passwordHash);
+  if (stored === undefined) {
     return false;
   }
-  const expectedKey = Buffer.from(expected, "base64url");
-  const actualKey = await deriveKey(password, Buffer.from(salt, "base64url"), {
-    N: Number(cost),
-    r: Number(blockSize),
-    p: Number(parallelism),
-  });
+  const actualKey = await deriveKey(password, stored.salt, stored.cost);
   return (
-    actualKey.length === expectedKey.length &&
-    timingSafeEqual(actualKey, expectedKey)
+    actualKey.length === stored.expectedKey.length &&
+    timingSafeEqual(actualKey, stored.expectedKey)
+  );
+};
+
+/** Answers whether a stored hash was made at less than `passwordHashCost`, so it should be made again (#140). */
+export const isPasswordHashOutdated = (passwordHash: string): boolean => {
+  const stored = readPasswordHash(passwordHash);
+  return (
+    stored === undefined ||
+    stored.cost.N * stored.cost.r < passwordHashCost.N * passwordHashCost.r ||
+    stored.cost.p < passwordHashCost.p
   );
 };
 

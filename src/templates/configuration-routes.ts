@@ -1,5 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { Type, type Static } from "typebox";
+import { applicationIdField, chooseOwner } from "../access/applications.js";
 import type { Database } from "../lib/database.js";
 import {
   isUniqueViolation,
@@ -21,7 +22,7 @@ const configurationBody = Type.Object(
       format: "email",
       maxLength: 320,
       description:
-        "The address Templates using this Configuration are sent from, such as no-reply@example.com",
+        "The address Templates using this Configuration are sent from, such as no-reply@example.com. Its Application's API Keys may send from it",
     }),
     fromName: Type.Optional(
       Type.String({
@@ -30,6 +31,7 @@ const configurationBody = Type.Object(
           'The name shown with the address, such as "Wizzaroo". Leave it empty to send with the address alone',
       }),
     ),
+    applicationId: applicationIdField,
   },
   { additionalProperties: false },
 );
@@ -161,10 +163,15 @@ export const registerConfigurationRoutes = (
       },
     },
     async (request, reply) => {
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        request.body.applicationId,
+      );
       try {
         const [row] = await database
           .insert(configurations)
-          .values(toValues(request.body))
+          .values({ ...toValues(request.body), ...owner })
           .returning();
         return await reply.code(201).send(row);
       } catch (error) {
@@ -186,10 +193,15 @@ export const registerConfigurationRoutes = (
       },
     },
     async (request) => {
+      const owner = await chooseOwner(
+        database,
+        request.apiKey,
+        request.body.applicationId,
+      );
       try {
         const [row] = await database
           .update(configurations)
-          .set({ ...toValues(request.body), updatedAt: new Date() })
+          .set({ ...toValues(request.body), ...owner, updatedAt: new Date() })
           .where(eq(configurations.id, request.params.id))
           .returning();
         if (row === undefined) {

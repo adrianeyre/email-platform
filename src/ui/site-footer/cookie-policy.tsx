@@ -2,10 +2,10 @@ import { appearanceStorageKey } from "../appearance.js";
 
 const browserStorage = [
   {
-    name: "session",
+    name: "__Host-session",
     kind: "Cookie",
     purpose:
-      "Keeps you signed in. HttpOnly and SameSite=Lax, so the page itself can't read it, and Secure when the app is served over HTTPS.",
+      "Keeps you signed in. HttpOnly and SameSite=Lax, so the page itself can't read it. Over HTTPS it is Secure, and its __Host- prefix means no subdomain and no plain-HTTP service on this host name can set it; over plain HTTP, which can't carry the prefix, it is named session.",
     lasts: "30 days, or until you sign out",
   },
   {

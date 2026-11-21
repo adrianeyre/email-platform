@@ -1,10 +1,13 @@
 # Glossary
 
 **User**
-: A person who signs in to the UI with an email and password. Every User can do everything. The first one is created with `pnpm cli user:create`.
+: A person who signs in to the UI with an email and password. Every User can do everything, until Wizzaroo adds a second School or another Application gets an API Key ([ADR 0011](docs/architectural-decision-record/0011-every-user-has-full-rights-until-the-second-school.md)). The first one is created with `pnpm cli user:create`.
+
+**Application**
+: A program that sends through the `/v1` API with API Keys of its own, such as Wizzaroo. It is not a User and never signs in to the UI. The platform keeps a row for each, named when a User makes a key for it, and Templates, Headers, Footers, Configurations and Messages can belong to one ([ADR 0009](docs/architectural-decision-record/0009-api-keys-belong-to-an-application.md)).
 
 **API Key**
-: A secret that lets an application call the `/v1` API as a Bearer token (`ek_…`). It is shown once and stored as a hash.
+: A secret that lets an Application call the `/v1` API as a Bearer token (`ek_…`). Each belongs to one Application, and reaches only what is that Application's: it changes and deletes only its Templates, Headers and Footers, sends only from its Configurations' addresses or the default from address, and reads only its Messages. Anything else answers as if it did not exist. It is shown once and stored as a hash.
 
 **Template**
 : A named email: a subject, an HTML body, an optional text body, and the names of its **required variables**. All three parts are rendered with Handlebars. When the text body is empty, it is generated from the rendered HTML.
@@ -25,7 +28,7 @@
 : Content shared by Templates, shown above or below a Template's own content when it is sent, such as a logo or legal notes. Each is made in the same designer as a Template. Changing one changes every Template using it, straight away.
 
 **Configuration**
-: Settings shared by Templates: a name, a from email address and a from name. A Template using one is sent from `From name <from email address>` when the send request gives no from address. The built-in "Wizzaroo" Configuration sends from `Wizzaroo <no-reply@wizzaroo.adrianeyre.co.uk>`.
+: Settings shared by Templates: a name, a from email address and a from name, and the Application it belongs to, if any. A Template using one is sent from `From name <from email address>` when the send request gives no from address. Its Application's API Keys may send from its address; no other key may. The built-in "Wizzaroo" Configuration sends from `Wizzaroo <no-reply@wizzaroo.adrianeyre.co.uk>`.
 
 **Delivery**
 : The page for the Settings below: the SMTP provider, default from address (`no-reply@adrianeyre.co.uk` on a new install) and log retention.
@@ -37,7 +40,7 @@
 : Example values saved with a Template. They are used for the live preview and for test sends.
 
 **Message**
-: One email the app has been asked to send, and its row in the log. Its status is `queued`, then `sent` or `failed`. The row keeps the rendered subject and bodies, the recipients, the attempt count, the provider's message ID and the last error.
+: One email the app has been asked to send, and its row in the log. Its status is `queued`, then `sent` or `failed`. The row keeps the rendered subject, the recipients, the attempt count, the provider's message ID and the last error. It keeps the rendered bodies only while it is queued: the worker drops them once the Message is sent or has failed, and Retention's daily job drops them, failing the Message, if it is still queued after 7 days.
 
 **Settings**
 : The single set of options for the app: the SMTP provider (host, port, TLS, username and the encrypted password), the default from address, and the log retention in days.
@@ -46,7 +49,7 @@
 : The mail service the worker hands each Message to, such as Amazon SES SMTP, Postmark or Mailpit in development.
 
 **Retention**
-: How many days Messages are kept. A daily job deletes older ones.
+: How many days Messages are kept, 1 to 3,650 (90 by default). A daily job deletes older ones. It never keeps a Message's body: that goes once the Message is sent or failed, and after 7 days at most.
 
 **Idempotency-Key**
-: An optional header on `POST /v1/messages`. Repeating a key returns the first Message instead of sending again.
+: An optional header on `POST /v1/messages`. Repeating a key returns the first Message instead of sending again. Each Application's keys are its own: the same key from another Application is a new Message.

@@ -17,6 +17,9 @@ import {
   escapeText,
   renderDesignHtml,
   safeColor,
+  safeCondition,
+  safeFont,
+  safeUrl,
   styleRichText,
 } from "./render-html.js";
 
@@ -187,5 +190,123 @@ describe("rendering a design", () => {
     );
     expect(rendered.text).toContain("Body text");
     expect(rendered.text).not.toContain("Secret preview line");
+  });
+});
+
+describe("what a Design's own fields may carry (pen test S3)", () => {
+  it("keeps a showIf only when it is a variable path, and drops one carrying Handlebars (#153)", () => {
+    expect(safeCondition(" isVip ")).toBe("isVip");
+    expect(safeCondition("user.isVip")).toBe("user.isVip");
+    expect(safeCondition("@first")).toBe("@first");
+    for (const hostile of [
+      'true}}{{#with "x"}}{{this}}{{/with}}{{/if}}{{#if true',
+      "a b",
+      "(eq a b)",
+      "a..b",
+      "../parent",
+      "1st",
+    ]) {
+      expect(safeCondition(hostile), hostile).toBe("");
+    }
+    const html = renderDesignHtml(
+      createDesign([
+        {
+          ...createTextBlock("<p>Always</p>"),
+          showIf:
+            'true}}{{#with "show-if-ran"}}{{this}}{{/with}}{{/if}}{{#if true',
+        },
+      ]),
+    );
+    expect(html).not.toContain("show-if-ran");
+    expect(html).not.toContain("{{#if");
+    expect(renderTemplate({ subject: "s", html }, {}).html).toContain("Always");
+  });
+
+  it("keeps a Block's link or image only when it is http(s), mailto, tel, # or a {{variable}} (#154)", () => {
+    for (const kept of [
+      "https://x.test/a",
+      "HTTP://x.test",
+      "mailto:a@b.test",
+      "tel:+441234",
+      "#top",
+      "{{url}}",
+      "{{ base.url }}/path",
+    ]) {
+      expect(safeUrl(kept), kept).toBe(kept);
+    }
+    for (const dropped of [
+      "javascript:alert(1)",
+      " JavaScript:alert(1)",
+      "java\tscript:alert(1)",
+      "\u0001javascript:alert(1)",
+      "data:text/html,<script>alert(1)</script>",
+      "vbscript:x",
+      "//evil.test",
+      "/relative",
+      '{{"javascript:alert(1)"}}',
+      "{{{url}}}",
+    ]) {
+      expect(safeUrl(dropped), dropped).toBe("");
+    }
+    const social = createSocialBlock(["website", "website"]);
+    const [first, second] = social.links;
+    if (first === undefined || second === undefined) {
+      throw new Error("Expected two links");
+    }
+    first.url = "javascript:alert(3)";
+    second.url = "data:text/html,<script>alert(4)</script>";
+    const html = renderDesignHtml(
+      createDesign([
+        createButtonBlock("Go", "javascript:alert(document.domain)"),
+        {
+          ...createImageBlock(),
+          src: "data:image/svg+xml,<svg onload=alert(1)>",
+          href: "javascript:alert(2)",
+        },
+        {
+          ...createImageBlock(),
+          src: "https://x.test/a.png",
+          href: "javascript:x",
+        },
+        social,
+      ]),
+    );
+    expect(html).not.toMatch(/javascript:|data:/u);
+    // The Button falls back to #, as with no URL; the bad image is left out; the good one keeps no link.
+    expect(html.match(/href="#"/gu)).toHaveLength(2);
+    expect(html.match(/<img /gu)).toHaveLength(1);
+    expect(html).not.toContain("<svg ");
+  });
+
+  it("keeps a fontFamily only when it is a font stack, else the default (#156)", () => {
+    expect(safeFont("'Open Sans', Arial, sans-serif")).toBe(
+      "'Open Sans', Arial, sans-serif",
+    );
+    expect(safeFont('"Trebuchet MS", Helvetica')).toBe(
+      "'Trebuchet MS', Helvetica",
+    );
+    expect(safeFont("-apple-system, BlinkMacSystemFont")).toBe(
+      "-apple-system, BlinkMacSystemFont",
+    );
+    for (const hostile of [
+      "Arial&#59background:url(https://evil.test/f)",
+      "Arial;background:red",
+      "Arial}</style><script>alert(1)</script><style>",
+      "'Arial",
+      "Arial, ",
+      "",
+    ]) {
+      expect(safeFont(hostile), hostile).toBe(defaultSettings.fontFamily);
+    }
+    expect(safeFont("x(y)", "serif")).toBe("serif");
+    const design = createDesign([
+      createTextBlock("<p>Hi</p>"),
+      { ...createButtonBlock(), fontFamily: "Arial&#59color:red" },
+    ]);
+    design.settings.fontFamily = "Arial&#59background:url(https://evil.test/f)";
+    const html = renderDesignHtml(design);
+    expect(html).not.toContain("&#59");
+    expect(html).not.toContain("evil.test");
+    expect(html).toContain(`font-family:${defaultSettings.fontFamily};`);
   });
 });
