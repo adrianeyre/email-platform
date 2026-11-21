@@ -9,6 +9,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { builtInEmails, builtInParts } from "../templates/built-in-emails.js";
 import { partBlocks } from "../templates/compose.js";
+import { ApplicationPicker } from "./application-picker.js";
 import { parseDesign, type Design } from "../templates/design/model.js";
 import {
   renderDesignFragment,
@@ -889,6 +890,16 @@ const TemplateEditor = ({
               : `Shown when choosing a ${details.singular} for a template.`
           }
           isRequired
+        />
+        <ApplicationPicker
+          value={form.applicationId}
+          onChange={(applicationId) => {
+            update({ applicationId });
+          }}
+          hints={{
+            none: `No API key can change or delete this ${details.singular}; only users can.`,
+            owned: `Only this application's API keys can change or delete this ${details.singular}.`,
+          }}
         />
         {isTemplate ? (
           <>

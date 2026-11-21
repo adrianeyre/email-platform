@@ -4,7 +4,7 @@
 
 **Design email templates. Send them from your apps with one call.**
 
-[Website](https://email-platform.adrianeyre.co.uk/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-platform/releases)
+[Website](https://adrianeyre.github.io/email-template/) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md) · [Releases](https://github.com/adrianeyre/email-template/releases)
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/illustrations/hero-dark.png" />
@@ -29,7 +29,7 @@ Everything lives in the app's own Postgres, which runs in Docker: users, API key
 | Configuration       | Settings shared by templates: the from name and address they are sent with, such as `Wizzaroo <no-reply@wizzaroo.adrianeyre.co.uk>`                                                                 | [Configuration](docs/guide/templates.md#configuration)     |
 | Built-in emails     | 15 ready-made Wizzaroo emails (sign-ups, password resets, passkeys, invitations and account changes) with their header, footer and configuration, added in one command                              | [Built-in emails](docs/guide/templates.md#built-in-emails) |
 | Sending             | `POST /v1/messages` by template slug, name or ID, with to, cc, bcc, reply-to and attachments; queued and retried 3 times with backoff; `Idempotency-Key` support; a typed Node client               | [Sending](docs/guide/sending.md)                           |
-| Logs                | One row per email with its status, any error and the rendered email; searchable; deleted after the retention you choose                                                                             | [Logs](docs/guide/logs.md)                                 |
+| Logs                | One row per email with its status, any error and its recipients and subject; the body only until it is sent; searchable; deleted after the retention you choose                                     | [Logs](docs/guide/logs.md)                                 |
 | Delivery and access | One SMTP provider (password encrypted), a default from address (`no-reply@adrianeyre.co.uk` to start), users with passwords and API keys for applications, all stored hashed                        | [Delivery and access](docs/guide/delivery-and-access.md)   |
 | Interface           | Built to WCAG 2.2 AA, with System, Light or Dark and six colour themes, each tested for contrast; every tab titled `Email Template - …`                                                             | [Accessibility](docs/guide/accessibility.md)               |
 
@@ -85,10 +85,10 @@ You need Node.js 26, pnpm 12.21 and Docker.
 ```sh
 pnpm install
 docker compose -f docker-compose.dev.yml up -d   # Postgres, and Mailpit to catch email
-cp .env.example .env
+cp .env.example .env                             # then set ENCRYPTION_KEY in .env: openssl rand -base64 32
 pnpm migrate
 pnpm cli user:create you@example.com             # prompts for a password
-pnpm cli templates:add-built-ins                 # the 15 Wizzaroo emails
+pnpm cli templates:add-built-ins --application "My app"   # the 15 Wizzaroo emails, for your app's API keys
 pnpm exec vite build
 pnpm local                                        # the api and worker together, on http://localhost:4320
 ```
@@ -107,16 +107,7 @@ curl -X POST http://localhost:4320/v1/messages \
        "variables":{"email":"ada@example.com","resetUrl":"https://app.example.com/reset?t=abc","linkLifetime":"1 hour"}}'
 ```
 
-Or with the typed Node client, [`@adrianeyre/email-client`](packages/email-client/README.md), which checks each built-in email's variables when you compile. It is published to [GitHub Packages](https://github.com/adrianeyre/email-platform/pkgs/npm/email-client), so point the `@adrianeyre` scope there in an `.npmrc` beside your app's `package.json`, with a GitHub token that has the `read:packages` scope:
-
-```ini
-@adrianeyre:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
-```
-
-```sh
-pnpm add @adrianeyre/email-client
-```
+Or with the typed Node client, [`@adrianeyre/email-client`](packages/email-client/README.md), which checks each built-in email's variables when you compile:
 
 ```ts
 import { createEmailClient } from "@adrianeyre/email-client";
@@ -137,7 +128,7 @@ The email is sent from the template's configuration (here `Wizzaroo <no-reply@wi
 
 | Read                                                                    | For                                                                                    |
 | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| [Local setup](docs/getting-started/local-setup.md)                      | Running it, your first email, sending from Node, and every command                     |
+| [Local setup](docs/getting-started/local-setup.md)                      | Running it, your first email, and every command                                        |
 | [Environment variables](docs/reference/environment-variables.md)        | `DATABASE_URL`, `PORT`, `APP_URL` and `ENCRYPTION_KEY`                                 |
 | [Templates](docs/guide/templates.md)                                    | The designer, Socials, previews, slugs, headers, footers, configurations and built-ins |
 | [Sending](docs/guide/sending.md)                                        | `POST /v1/messages`, the from address and idempotency                                  |
@@ -145,8 +136,7 @@ The email is sent from the template's configuration (here `Wizzaroo <no-reply@wi
 | [Delivery and access](docs/guide/delivery-and-access.md)                | The SMTP provider, default from address, users, API keys, appearance                   |
 | [Accessibility](docs/guide/accessibility.md)                            | WCAG 2.2 AA and how it is checked                                                      |
 | [How it fits together](docs/architecture/how-it-fits-together.md)       | The four roles and the life of an email                                                |
-| [Deploying](docs/operations/deploying.md)                               | First-time setup and `pnpm deploy:server`                                              |
-| [Setting up Brevo](docs/operations/setting-up-brevo.md)                 | An SMTP provider and its DNS records, step by step                                     |
+| [Deploying](docs/operations/deploying.md)                               | First-time setup and `sh ops/deploy-server.sh`                                         |
 | [Backups and restore](docs/operations/backups-and-restore.md)           | Nightly encrypted backups and restoring one                                            |
 | [Website, CI and releases](docs/operations/website-ci-and-releases.md)  | The website and its Stageshow illustrations, releases, the client                      |
 | [Search engines and icons](docs/operations/search-engines-and-icons.md) | SEO and device icons                                                                   |

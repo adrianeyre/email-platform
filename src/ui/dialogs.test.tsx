@@ -55,8 +55,20 @@ const responses: Record<string, unknown> = {
         id: "k1",
         name: "Shop",
         prefix: "ek_ab12",
+        applicationId: "a1",
+        applicationName: "Shop app",
         createdAt: "2026-11-01T09:00:00Z",
         lastUsedAt: null,
+      },
+    ],
+  },
+  "/app/applications": {
+    applications: [
+      {
+        id: "a1",
+        name: "Shop app",
+        apiKeys: 1,
+        createdAt: "2026-11-01T09:00:00Z",
       },
     ],
   },
@@ -231,6 +243,91 @@ describe("delete dialogs", () => {
       "/app/api-keys/k1",
     ]);
   });
+
+  it("make an API key for the application named, and rename an application in a dialog (ADR 0009)", async () => {
+    await renderAt("/api-keys");
+    expect(host.querySelector("tbody")?.textContent).toContain("Shop app");
+    const pageInput = (text: string) => {
+      const label = [...host.querySelectorAll("label")].find((item) =>
+        item.textContent.startsWith(text),
+      );
+      const input =
+        label?.querySelector("input") ??
+        host.querySelector<HTMLInputElement>(`[id="${label?.htmlFor ?? ""}"]`);
+      if (input === null) {
+        throw new Error(`No input labelled ${text}`);
+      }
+      return input;
+    };
+    await typeInto(pageInput("Name"), "Till");
+    await typeInto(pageInput("Application"), "Shop app");
+    await typeInto(pageInput("Your current password"), "my-own-password");
+    await click(button("Create API key"));
+    expect(
+      requests.find(
+        (request) =>
+          request.method === "POST" && request.url === "/app/api-keys",
+      )?.body,
+    ).toEqual({
+      name: "Till",
+      application: "Shop app",
+      currentPassword: "my-own-password",
+    });
+
+    await click(button("Rename Shop app"));
+    await typeInto(inputLabelled("Name"), "Shop");
+    const rename = [...dialog().querySelectorAll("button")].find(
+      (item) => item.textContent.trim() === "Rename",
+    );
+    if (rename === undefined) {
+      throw new Error("No Rename button in the dialog");
+    }
+    await click(rename);
+    expect(requests.find((request) => request.method === "PUT")?.body).toEqual({
+      name: "Shop",
+    });
+    expect(requests.find((request) => request.method === "PUT")?.url).toBe(
+      "/app/applications/a1",
+    );
+
+    await click(button("Delete Shop app"));
+    expect(dialog().textContent).toContain("delete its keys first");
+  });
+});
+
+describe("the API keys page", () => {
+  it("creates a key only once your current password is given, and sends it", async () => {
+    await renderAt("/api-keys");
+    const field = (text: string): HTMLInputElement => {
+      const label = [...host.querySelectorAll("label")].find((item) =>
+        item.textContent.startsWith(text),
+      );
+      const input =
+        label?.querySelector("input") ??
+        host.querySelector<HTMLInputElement>(`[id="${label?.htmlFor ?? ""}"]`);
+      if (input === null) {
+        throw new Error(`No input labelled ${text}`);
+      }
+      return input;
+    };
+    await typeInto(field("Name"), "Shop 2");
+    await typeInto(field("Application"), "Shop app");
+    expect(button("Create API key").disabled).toBe(true);
+    await typeInto(field("Your current password"), "my-own-password");
+    expect(field("Your current password").type).toBe("password");
+    expect(button("Create API key").disabled).toBe(false);
+    await click(button("Create API key"));
+    expect(requests.find((request) => request.method === "POST")).toEqual({
+      url: "/app/api-keys",
+      method: "POST",
+      body: {
+        name: "Shop 2",
+        application: "Shop app",
+        currentPassword: "my-own-password",
+      },
+    });
+    expect(field("Your current password").value).toBe("");
+  });
 });
 
 describe("the Users page", () => {
@@ -240,12 +337,21 @@ describe("the Users page", () => {
     expect(() => button("Remove me@example.com")).toThrow();
     await click(button("Remove sam@example.com"));
     expect(dialog().textContent).toContain("signed out everywhere");
+    expect(button("Remove user").disabled).toBe(true);
+    await typeInto(inputLabelled("Your current password"), "my-own-password");
+    expect(button("Remove user").disabled).toBe(false);
     await click(button("Remove user"));
-    expect(deletes().map((request) => request.url)).toEqual(["/app/users/u2"]);
+    expect(deletes()).toEqual([
+      {
+        url: "/app/users/u2",
+        method: "DELETE",
+        body: { currentPassword: "my-own-password" },
+      },
+    ]);
     expect(host.textContent).toContain("sam@example.com was removed.");
   });
 
-  it("adds a user only once the email and password are valid", async () => {
+  it("adds a user only once the email and password are valid and your current password is given", async () => {
     await renderAt("/users");
     await click(button("Add user"));
     const add = () =>
@@ -263,6 +369,11 @@ describe("the Users page", () => {
     await click(button("Generate a strong password"));
     const password = inputLabelled("Password").value;
     expect(password).toHaveLength(20);
+    expect(add()?.disabled).toBe(true);
+    await typeInto(inputLabelled("Your current password"), "my-own-password");
+    expect(inputLabelled("Your current password").autocomplete).toBe(
+      "current-password",
+    );
     expect(add()?.disabled).toBe(false);
     expect(inputLabelled("Password").type).toBe("password");
     await click(button("Show password"));
@@ -276,7 +387,11 @@ describe("the Users page", () => {
     expect(requests.find((request) => request.method === "POST")).toEqual({
       url: "/app/users",
       method: "POST",
-      body: { email: "kim@example.com", password },
+      body: {
+        email: "kim@example.com",
+        password,
+        currentPassword: "my-own-password",
+      },
     });
     expect(host.querySelector("dialog[open]")).toBeNull();
     expect(host.textContent).toContain("kim@example.com was added");
@@ -355,6 +470,6 @@ describe("the Credits", () => {
       dialog()
         .querySelector<HTMLAnchorElement>(".credits-creator a")
         ?.getAttribute("href"),
-    ).toBe("https://github.com/adrianeyre/email-platform");
+    ).toBe("https://github.com/adrianeyre/email-template");
   });
 });

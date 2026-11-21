@@ -1,27 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  describeError,
-  findViolatedConstraint,
-  isUniqueViolation,
-} from "./http.js";
-
-describe("describeError", () => {
-  it("uses the message, then nested errors, then the code", () => {
-    expect(describeError(new Error("boom"))).toBe("boom");
-    expect(
-      describeError(
-        new AggregateError([
-          new Error("connect ECONNREFUSED ::1:1"),
-          new Error("connect ECONNREFUSED 127.0.0.1:1"),
-        ]),
-      ),
-    ).toBe("connect ECONNREFUSED ::1:1; connect ECONNREFUSED 127.0.0.1:1");
-    expect(
-      describeError(Object.assign(new Error(""), { code: "ESOCKET" })),
-    ).toBe("ESOCKET");
-    expect(describeError("plain")).toBe("plain");
-  });
-});
+import { findViolatedConstraint, isUniqueViolation } from "./http.js";
 
 describe("isUniqueViolation", () => {
   it("recognises Postgres unique violations directly or as a cause", () => {

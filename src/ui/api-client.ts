@@ -52,6 +52,17 @@ export const readRecords = (value: unknown, key: string): JsonRecord[] => {
   return Array.isArray(property) ? property.filter(isRecord) : [];
 };
 
+/** Who made a User or API Key, as the Users and API keys pages show it (pen test A2, #125). */
+export const readCreator = (value: unknown): string => {
+  const email = readText(value, "createdByEmail");
+  if (email !== "") {
+    return email;
+  }
+  return readText(value, "createdByUserId") === ""
+    ? "The CLI, or before this was recorded"
+    : "A deleted user";
+};
+
 export const readTexts = (value: unknown, key: string): string[] => {
   const property = readProperty(value, key);
   return Array.isArray(property)

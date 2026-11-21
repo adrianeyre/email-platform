@@ -10,5 +10,11 @@ coverage
 .DS_Store
 .pnpm-store/
 rclone.conf
+# The age private key that opens every backup: kept off the server, never in the checkout
+# (docs/operations/backups-and-restore.md).
+backup-identity.txt
+key.txt
+# The pen-test deployment's own secrets, fixture seed and credentials package (docs/pen-test/deployment.md).
+.pen-test-deployment/
 site/dist
 .claude/worktrees/

@@ -5,6 +5,7 @@
  */
 import { findFont, googleFontsUrl } from "./fonts.js";
 import { socialIcons, socialIconSvg } from "./social-icons.js";
+import { defaultFontFamily } from "./model.js";
 import type {
   Block,
   ButtonBlock,
@@ -47,7 +48,42 @@ const isColor = (value: string) =>
 export const safeColor = (value: string, fallback = ""): string =>
   isColor(value) ? value.trim() : fallback;
 
-const safeFont = (value: string): string => value.replaceAll(/[";<>{}]/gu, "");
+/**
+ * A CSS font stack: font names of letters, digits, spaces, hyphens and underscores, each bare or in matching quotes,
+ * separated by commas. Nothing in it can end the declaration, add another, or leave a style attribute or a <style>.
+ */
+const fontName = /^(?:'[\w -]+'|"[\w -]+"|[\w -]+)$/u;
+
+const isFontStack = (value: string): boolean =>
+  value.split(",").every((name) => fontName.test(name.trim()));
+
+/**
+ * Keeps a font stack only when it is one, else the fallback, so a value can't add CSS of its own (#156). Double quotes
+ * become single ones, as the stack is written into style="…" attributes.
+ */
+export const safeFont = (
+  value: string,
+  fallback = defaultFontFamily,
+): string =>
+  isFontStack(value) ? value.trim().replaceAll('"', "'") : fallback;
+
+/** A Block's condition: one variable path such as isVip or user.isVip, so it can carry no Handlebars of its own. */
+const conditionPath = /^@?[a-z_$][\w$-]*(?:\.[\w$-]+)*$/iu;
+
+/** Keeps a Block's showIf only when it is a variable path, else none (#153). */
+export const safeCondition = (value: string): string =>
+  conditionPath.test(value.trim()) ? value.trim() : "";
+
+/**
+ * A Block's link or image source: an http(s), mailto or tel URL, a #fragment, or one starting with a {{variable}}
+ * filled in when the email is sent.
+ */
+const safeUrlStart =
+  /^(?:https?:\/\/|mailto:|tel:|#|\{\{\s*@?[\w$.-]+\s*\}\})/iu;
+
+/** Keeps a Block's URL only when it is one of those, else "", so javascript:, data: and the like never reach the email (#154). */
+export const safeUrl = (value: string): string =>
+  safeUrlStart.test(value.trim()) ? value.trim() : "";
 
 const px = (value: number) => `${String(Math.round(value))}px`;
 
@@ -155,9 +191,9 @@ export const styleRichText = (
 /* ---------- Blocks ---------- */
 
 const wrapLink = (href: string, inner: string) =>
-  href.trim() === ""
+  safeUrl(href) === ""
     ? inner
-    : `<a href="${escapeAttribute(href.trim())}" target="_blank" style="text-decoration:none;">${inner}</a>`;
+    : `<a href="${escapeAttribute(safeUrl(href))}" target="_blank" style="text-decoration:none;">${inner}</a>`;
 
 /** A rough width for Outlook's button shape, which can't grow to fit its label. */
 const estimateButtonWidth = (block: ButtonBlock) =>
@@ -173,14 +209,14 @@ const renderButton = (
   settings: DesignSettings,
   width: number,
 ): string => {
-  const font = safeFont(block.fontFamily || settings.fontFamily);
+  const font = safeFont(block.fontFamily, safeFont(settings.fontFamily));
   const fill = safeColor(block.buttonColor, "#2563eb");
   const ink = safeColor(block.textColor, "#ffffff");
   const border =
     block.borderWidth > 0
       ? `border:${px(block.borderWidth)} solid ${safeColor(block.borderColor, fill)};`
       : "";
-  const href = escapeAttribute(block.url.trim() || "#");
+  const href = escapeAttribute(safeUrl(block.url) || "#");
   const label = escapeText(block.label);
   const lineHeight = Math.round(block.fontSize * 1.25);
   const height = lineHeight + block.innerPaddingY * 2 + block.borderWidth * 2;
@@ -206,11 +242,12 @@ const renderButton = (
 };
 
 const renderImage = (block: ImageBlock, width: number): string => {
-  if (block.src.trim() === "") {
+  const src = safeUrl(block.src);
+  if (src === "") {
     return "";
   }
   const pixels = Math.round((width * block.widthPercent) / 100);
-  const image = `<img src="${escapeAttribute(block.src.trim())}" alt="${escapeAttribute(block.alt)}" width="${String(pixels)}" style="display:block;width:100%;max-width:${px(pixels)};height:auto;border:0;outline:none;text-decoration:none;border-radius:${px(block.borderRadius)};">`;
+  const image = `<img src="${escapeAttribute(src)}" alt="${escapeAttribute(block.alt)}" width="${String(pixels)}" style="display:block;width:100%;max-width:${px(pixels)};height:auto;border:0;outline:none;text-decoration:none;border-radius:${px(block.borderRadius)};">`;
   return `<table ${tableAttributes} width="100%"><tr><td align="${block.align}"><table ${tableAttributes} width="${String(pixels)}" style="width:100%;max-width:${px(pixels)};"><tr><td>${wrapLink(block.href, image)}</td></tr></table></td></tr></table>`;
 };
 
@@ -222,7 +259,7 @@ const renderDivider = (block: DividerBlock): string =>
  * address is left out.
  */
 const renderSocial = (block: SocialBlock, settings: DesignSettings): string => {
-  const links = block.links.filter((link) => link.url.trim() !== "");
+  const links = block.links.filter((link) => safeUrl(link.url) !== "");
   if (links.length === 0) {
     return "";
   }
@@ -236,7 +273,7 @@ const renderSocial = (block: SocialBlock, settings: DesignSettings): string => {
       : "";
     const left = index === 0 ? 0 : half;
     const right = index === links.length - 1 ? 0 : half;
-    return `<td valign="middle" style="padding:0 ${px(right)} 0 ${px(left)};"><a href="${escapeAttribute(link.url.trim())}" target="_blank" title="${escapeAttribute(label)}" style="text-decoration:none;color:${labelColor};"><table ${tableAttributes}><tr><td valign="middle" width="${String(Math.round(block.iconSize))}" style="line-height:0;font-size:0;">${icon}</td>${text}</tr></table></a></td>`;
+    return `<td valign="middle" style="padding:0 ${px(right)} 0 ${px(left)};"><a href="${escapeAttribute(safeUrl(link.url))}" target="_blank" title="${escapeAttribute(label)}" style="text-decoration:none;color:${labelColor};"><table ${tableAttributes}><tr><td valign="middle" width="${String(Math.round(block.iconSize))}" style="line-height:0;font-size:0;">${icon}</td>${text}</tr></table></a></td>`;
   });
   return `<table ${tableAttributes} width="100%"><tr><td align="${block.align}"><table ${tableAttributes}><tr>${cells.join("")}</tr></table></td></tr></table>`;
 };
@@ -318,7 +355,7 @@ const renderBlock = (
     ? `<table ${tableAttributes} width="100%" style="border-collapse:separate;"><tr><td${safeColor(block.backgroundColor) === "" ? "" : ` bgcolor="${safeColor(block.backgroundColor)}"`} style="${boxStyle(block)}">${content}</td></tr></table>`
     : content;
   const row = `<tr${block.hideOnMobile ? ' class="hide-mobile"' : ""}><td style="padding:${paddingCss(block.padding)};">${boxed}</td></tr>`;
-  const condition = block.showIf.trim();
+  const condition = safeCondition(block.showIf);
   return condition === "" ? row : `{{#if ${condition}}}${row}{{/if}}`;
 };
 

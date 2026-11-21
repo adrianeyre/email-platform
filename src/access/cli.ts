@@ -3,6 +3,7 @@ import { Writable } from "node:stream";
 import type { Database } from "../lib/database.js";
 import { and, eq, inArray, isNull, notExists } from "drizzle-orm";
 import { configurations, emailParts, templates } from "../lib/schema.js";
+import { findOrCreateApplication } from "./applications.js";
 import {
   builtInConfiguration,
   builtInEmails,
@@ -10,6 +11,11 @@ import {
   toPartBody,
   toTemplateBody,
 } from "../templates/built-in-emails.js";
+import {
+  forgetSmtpPassword,
+  resealSmtpPassword,
+  SmtpPasswordUnreadableError,
+} from "../settings/settings-store.js";
 import { createApiKey } from "./api-keys.js";
 import { createUser } from "./users.js";
 
@@ -22,17 +28,102 @@ export type ReadPassword = (prompt: string) => Promise<string>;
 export const usage = [
   "Commands:",
   "  user:create <email>    create a user; prompts for the password",
-  "  apikey:create <name>   create an API key and print it once",
-  "  templates:add-built-ins     add the built-in header, footer, configuration and emails that are not there yet",
-  "  templates:update-built-ins  replace the built-in header, footer, configuration and emails with this version's",
+  "  apikey:create <name> [--application <name>]",
+  "                         create an API key for an application (made if new; the key's name if left out) and print it once",
+  "  templates:add-built-ins [--application <name>]",
+  "                         add the built-in header, footer, configuration and emails that are not there yet,",
+  "                         and give them all to the application, so its API keys can change them and send from them",
+  "  templates:update-built-ins [--application <name>]",
+  "                         replace the built-in header, footer, configuration and emails with this version's",
+  "  smtp-password:reseal   after changing ENCRYPTION_KEY: prompts for the old key, and seals the saved SMTP password",
+  "                         again under ENCRYPTION_KEY",
+  "  smtp-password:forget   remove the saved SMTP password, when the key it was saved under is lost; enter it again",
+  "                         under Delivery",
 ].join("\n");
+
+const encryptionKeyBytes = 32;
+
+/** The rotation path for ENCRYPTION_KEY (#167): reseal the saved SMTP password under it, or forget it. */
+const runSmtpPasswordCommand = async (
+  database: Database,
+  command: "reseal" | "forget",
+  readPassword: ReadPassword,
+  encryptionKey: Buffer | undefined,
+): Promise<string> => {
+  if (command === "forget") {
+    await forgetSmtpPassword(database);
+    return "Removed the saved SMTP password. Enter it again under Delivery.";
+  }
+  if (encryptionKey === undefined) {
+    throw new CliCommandRefusedError("Set ENCRYPTION_KEY to the new key");
+  }
+  const oldKey = Buffer.from(
+    await readPassword(
+      "The ENCRYPTION_KEY the SMTP password was saved under: ",
+    ),
+    "base64",
+  );
+  if (oldKey.length !== encryptionKeyBytes) {
+    throw new CliCommandRefusedError(
+      `The old key must be ${String(encryptionKeyBytes)} bytes encoded as base64`,
+    );
+  }
+  try {
+    const outcome = await resealSmtpPassword(database, oldKey, encryptionKey);
+    return {
+      resealed: "Sealed the saved SMTP password again under ENCRYPTION_KEY.",
+      "already-sealed":
+        "The saved SMTP password already opens with ENCRYPTION_KEY; nothing changed.",
+      "none-saved": "No SMTP password is saved; nothing changed.",
+    }[outcome];
+  } catch (error) {
+    if (error instanceof SmtpPasswordUnreadableError) {
+      throw new CliCommandRefusedError(
+        "The old key can't open the saved SMTP password either; nothing changed",
+      );
+    }
+    throw error;
+  }
+};
+
+/** The value after `--application`, and the arguments without it. */
+const readApplicationOption = (
+  args: readonly string[],
+): { application: string | undefined; rest: string[] } => {
+  const index = args.indexOf("--application");
+  if (index === -1) {
+    return { application: undefined, rest: [...args] };
+  }
+  const application = args[index + 1];
+  if (application === undefined || application.trim() === "") {
+    throw new CliCommandRefusedError("Give --application a name");
+  }
+  return {
+    application,
+    rest: args.filter((_arg, at) => at !== index && at !== index + 1),
+  };
+};
 
 export const runCliCommand = async (
   database: Database,
   args: readonly string[],
   readPassword: ReadPassword,
+  /** ENCRYPTION_KEY, which the `smtp-password:reseal` command seals under. */
+  encryptionKey?: Buffer,
 ): Promise<string> => {
-  const [command, value] = args;
+  const { application, rest } = readApplicationOption(args);
+  const [command, value] = rest;
+  if (
+    command === "smtp-password:reseal" ||
+    command === "smtp-password:forget"
+  ) {
+    return runSmtpPasswordCommand(
+      database,
+      command === "smtp-password:reseal" ? "reseal" : "forget",
+      readPassword,
+      encryptionKey,
+    );
+  }
   if (command === "user:create" && value !== undefined) {
     const password = await readPassword("Password: ");
     if (
@@ -51,14 +142,22 @@ export const runCliCommand = async (
     }
   }
   if (command === "apikey:create" && value !== undefined) {
-    const { apiKey, secret } = await createApiKey(database, value);
+    const { apiKey, secret } = await createApiKey(database, value, application);
     return `Created API key "${apiKey.name}". Store it now; it is not shown again:\n${secret}`;
   }
   if (command === "templates:add-built-ins") {
-    return addBuiltInTemplates(database);
+    return withBuiltInsGivenTo(
+      database,
+      application,
+      await addBuiltInTemplates(database),
+    );
   }
   if (command === "templates:update-built-ins") {
-    return updateBuiltInTemplates(database);
+    return withBuiltInsGivenTo(
+      database,
+      application,
+      await updateBuiltInTemplates(database),
+    );
   }
   throw new CliCommandRefusedError(usage);
 };
@@ -237,6 +336,42 @@ export const updateBuiltInTemplates = async (
           `Skipped ${String(skipped.length)} whose slug another template uses: ${skipped.join(", ")}.`,
         ]),
   ].join("\n");
+};
+
+/** Gives the built-in Header, Footer, Configuration and emails to the Application named, when one is, made if new. */
+const withBuiltInsGivenTo = async (
+  database: Database,
+  applicationName: string | undefined,
+  report: string,
+): Promise<string> => {
+  if (applicationName === undefined) {
+    return report;
+  }
+  const application = await findOrCreateApplication(database, applicationName);
+  const owner = { applicationId: application.id };
+  await database
+    .update(emailParts)
+    .set(owner)
+    .where(
+      inArray(
+        emailParts.name,
+        builtInParts.map((part) => part.name),
+      ),
+    );
+  await database
+    .update(configurations)
+    .set(owner)
+    .where(eq(configurations.name, builtInConfiguration.name));
+  await database
+    .update(templates)
+    .set(owner)
+    .where(
+      inArray(
+        templates.name,
+        builtInEmails.map((email) => email.name),
+      ),
+    );
+  return `${report}\nGave them to the application "${application.name}": its API keys can change them and send from ${builtInConfiguration.fromEmail}.`;
 };
 
 export const readPasswordFromTerminal: ReadPassword = async (prompt) => {

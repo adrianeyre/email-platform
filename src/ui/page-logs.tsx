@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { readNumber, readRecords, readText, readTexts } from "./api-client.js";
+import {
+  readFlag,
+  readNumber,
+  readRecords,
+  readText,
+  readTexts,
+} from "./api-client.js";
 import { buildQueryString, toIsoDateTime } from "./query-string.js";
 import {
   AppLink,
@@ -236,18 +242,28 @@ export const MessagePage = ({ messageId }: { messageId: string }) => {
           <AppLink href={`/templates/${templateId}`}>this template</AppLink>.
         </p>
       )}
-      {html === "" ? null : (
-        <iframe
-          title="Email as sent"
-          className="preview-frame"
-          sandbox=""
-          srcDoc={html}
-        />
+      {readFlag(data, "isBodyKept") ? (
+        <>
+          {html === "" ? null : (
+            <iframe
+              title="Email as it will be sent"
+              className="preview-frame"
+              sandbox=""
+              srcDoc={html}
+            />
+          )}
+          <details className="details" open={html === ""}>
+            <summary>Plain text</summary>
+            <pre className="wrap">{readText(data, "text")}</pre>
+          </details>
+        </>
+      ) : (
+        <p className="muted">
+          The email itself isn&apos;t kept once it has been sent or has failed,
+          so the links in it, like password resets and invites, are not stored
+          here.
+        </p>
       )}
-      <details className="details" open={html === ""}>
-        <summary>Plain text</summary>
-        <pre className="wrap">{readText(data, "text")}</pre>
-      </details>
     </>
   );
 };

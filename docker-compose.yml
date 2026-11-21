@@ -1,14 +1,41 @@
 name: email-platform
 
+# Each app container logs in as a role of its own, none of them the superuser (#121, #138): see src/lib/database-roles.ts.
+x-app-environment: &app-environment
+  PORT: "4320"
+  APP_URL: ${APP_URL:?set APP_URL in .env to the UI address, such as http://email.home:4320}
+  ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env to 32 random bytes in base64, from openssl rand -base64 32}
+
+# Docker's json-file driver keeps a container's log until the container is removed. This bounds each container's log
+# to three 10 MB files, so old lines go as new ones arrive (pen test D2, #126). See docs/operations/deploying.md, "Logs".
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+# Every container drops every capability, can't gain privilege through a setuid binary, and is bounded in memory and
+# processes, so a compromised or runaway one can't regain root or exhaust the home server (pen test I4, #182). Each
+# service adds back nothing unless it says why. See docs/operations/deploying.md, "Container hardening".
+x-hardening: &hardening
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+
+# Built from ./Dockerfile, whose base images are pinned by digest (#183): email-platform:local is this checkout's own
+# build, never pulled. It runs as `node` with a read-only root; /tmp is the only place it may write.
 x-app: &app
+  <<: *hardening
   build: .
   image: email-platform:local
   restart: unless-stopped
-  environment:
-    DATABASE_URL: postgres://email_platform:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/email_platform
-    PORT: "4320"
-    APP_URL: ${APP_URL:?set APP_URL in .env to the UI address, such as http://email.home:4320}
-    ENCRYPTION_KEY: ${ENCRYPTION_KEY:?set ENCRYPTION_KEY in .env to 32 random bytes in base64}
+  logging: *logging
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m
+  mem_limit: 512m
+  pids_limit: 128
   networks:
     - default
     - database
@@ -20,9 +47,22 @@ x-after-migrate: &after-migrate
     condition: service_completed_successfully
 
 services:
+  # Pinned by digest (#183): bump the tag and digest together, as docs/operations/deploying.md, "Updating an image",
+  # describes. It runs as `postgres` from the start, so its entrypoint needs no capability to chown or drop to it: the
+  # image makes /var/lib/postgresql postgres's own, which a new postgres-data volume inherits.
   postgres:
-    image: postgres:18-alpine
+    <<: *hardening
+    image: postgres:18-alpine@sha256:ff64c9e3bdf8e2120107d3559de8db314e8305f7e38c5105903c6295876738ff
+    user: postgres
     restart: unless-stopped
+    logging: *logging
+    read_only: true
+    tmpfs:
+      - /var/run/postgresql:size=1m,uid=70,gid=70,mode=2775
+      - /tmp:size=64m,uid=70,gid=70,mode=1777
+    shm_size: 128m
+    mem_limit: 1g
+    pids_limit: 256
     environment:
       POSTGRES_USER: email_platform
       POSTGRES_DB: email_platform
@@ -44,19 +84,53 @@ services:
       start_period: 30s
       retries: 5
 
-  migrate:
+  # Makes the roles and sets their passwords from .env, then exits. With postgres, the only holder of the superuser's
+  # password. `:?` refuses only an unset or empty value, so provision checks each password's strength itself and
+  # refuses a weak one by name (#166); every other app container waits on it, directly or through migrate.
+  provision:
     <<: *app
     restart: "no"
-    command: ["dist/src/index.js", "migrate"]
+    command: ["dist/src/index.js", "provision"]
+    environment:
+      DATABASE_URL: postgres://email_platform:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/email_platform
+      DATABASE_MIGRATE_PASSWORD: ${DATABASE_MIGRATE_PASSWORD:?set DATABASE_MIGRATE_PASSWORD in .env}
+      DATABASE_API_PASSWORD: ${DATABASE_API_PASSWORD:?set DATABASE_API_PASSWORD in .env}
+      DATABASE_WORKER_PASSWORD: ${DATABASE_WORKER_PASSWORD:?set DATABASE_WORKER_PASSWORD in .env}
+      DATABASE_BACKUP_PASSWORD: ${DATABASE_BACKUP_PASSWORD:?set DATABASE_BACKUP_PASSWORD in .env}
+    networks:
+      - database
     depends_on:
       postgres:
         condition: service_healthy
 
+  # Applies migrations, then exits. It talks only to Postgres, so it sits on the internal database network alone and
+  # has no way out (pen test D1, #139).
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["dist/src/index.js", "migrate"]
+    environment:
+      <<: *app-environment
+      DATABASE_URL: postgres://email_platform_migrate:${DATABASE_MIGRATE_PASSWORD:?set DATABASE_MIGRATE_PASSWORD in .env}@postgres:5432/email_platform
+    networks:
+      - database
+    depends_on:
+      postgres:
+        condition: service_healthy
+      provision:
+        condition: service_completed_successfully
+
   api:
     <<: *app
     command: ["dist/src/index.js", "api"]
+    environment:
+      <<: *app-environment
+      DATABASE_URL: postgres://email_platform_api:${DATABASE_API_PASSWORD:?set DATABASE_API_PASSWORD in .env}@postgres:5432/email_platform
+    # On one host interface, never every one (pen test I4, #181): loopback unless API_BIND_ADDRESS names the LAN or
+    # tailnet address the UI and API are reached on (ADR 0003). A published port skips the host's INPUT chain, so ufw
+    # can't close it; filter it in DOCKER-USER (docs/operations/deploying.md, "The published port").
     ports:
-      - "4320:4320"
+      - "${API_BIND_ADDRESS:-127.0.0.1}:4320:4320"
     depends_on: *after-migrate
     healthcheck:
       test:
@@ -72,51 +146,88 @@ services:
   worker:
     <<: *app
     command: ["dist/src/index.js", "worker"]
+    environment:
+      <<: *app-environment
+      DATABASE_URL: postgres://email_platform_worker:${DATABASE_WORKER_PASSWORD:?set DATABASE_WORKER_PASSWORD in .env}@postgres:5432/email_platform
     depends_on: *after-migrate
 
+  # Built from ./backup/Dockerfile, pinned by digest with age and rclone pinned by version (#183). It runs as
+  # `postgres` with a read-only root: the dump is written to /tmp and the health state to /var/lib/postgresql, each an
+  # anonymous volume on disk, as before, not memory.
   backup:
+    <<: *hardening
     build: ./backup
     restart: unless-stopped
+    logging: *logging
+    read_only: true
+    mem_limit: 512m
+    pids_limit: 128
     environment:
       PGHOST: postgres
-      PGUSER: email_platform
+      PGUSER: email_platform_backup
       PGDATABASE: email_platform
-      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGPASSWORD: ${DATABASE_BACKUP_PASSWORD:?set DATABASE_BACKUP_PASSWORD in .env}
       BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT:?set BACKUP_AGE_RECIPIENT in .env}
       BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:?set BACKUP_RCLONE_REMOTE in .env}
       BACKUP_KEEP_DAYS: ${BACKUP_KEEP_DAYS:-14}
+      # Unset by default: old backups are deleted by the remote's lifecycle rule, not by the server (#127).
+      BACKUP_PRUNE_RCLONE_REMOTE: ${BACKUP_PRUNE_RCLONE_REMOTE:-}
       BACKUP_HOUR_UTC: ${BACKUP_HOUR_UTC:-2}
       RCLONE_CONFIG: /run/secrets/rclone.conf
     volumes:
       - ${BACKUP_RCLONE_CONFIG_FILE:?set BACKUP_RCLONE_CONFIG_FILE in .env}:/run/secrets/rclone.conf:ro
+      - /tmp
+      - /var/lib/postgresql
     networks:
       - default
       - database
     depends_on:
       postgres:
         condition: service_healthy
+      provision:
+        condition: service_completed_successfully
+    # Unhealthy when the last night failed or no night has succeeded for 26 hours (#129).
+    healthcheck:
+      test: ["CMD", "backup-health.sh"]
+      interval: 5m
+      timeout: 10s
+      retries: 1
+      start_period: 1m
+      start_interval: 5s
 
   restore:
+    <<: *hardening
     build: ./backup
+    logging: *logging
+    read_only: true
+    mem_limit: 512m
+    pids_limit: 128
     profiles:
       - restore
     environment:
       PGHOST: postgres
-      PGUSER: email_platform
+      PGUSER: email_platform_migrate
       PGDATABASE: ${RESTORE_DATABASE:-email_platform}
-      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGPASSWORD: ${DATABASE_MIGRATE_PASSWORD:?set DATABASE_MIGRATE_PASSWORD in .env}
       BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:?set BACKUP_RCLONE_REMOTE in .env}
       BACKUP_AGE_IDENTITY_FILE: /run/secrets/backup-identity.txt
+      # The Retention days in force now: the restore re-applies them (#130). restore.sh refuses to run without.
+      RESTORE_RETENTION_DAYS: ${RESTORE_RETENTION_DAYS:-}
       RCLONE_CONFIG: /run/secrets/rclone.conf
     volumes:
       - ${BACKUP_RCLONE_CONFIG_FILE:?set BACKUP_RCLONE_CONFIG_FILE in .env}:/run/secrets/rclone.conf:ro
-      - ${BACKUP_AGE_IDENTITY_FILE:-./backup-identity.txt}:/run/secrets/backup-identity.txt:ro
+      # Kept off the server: copied in for the restore and removed after (#131). With none named, restore.sh refuses.
+      - ${BACKUP_AGE_IDENTITY_FILE:-/dev/null}:/run/secrets/backup-identity.txt:ro
+      - /tmp
+      - /var/lib/postgresql
     networks:
       - default
       - database
     depends_on:
       postgres:
         condition: service_healthy
+      provision:
+        condition: service_completed_successfully
 
 networks:
   database:

@@ -1,0 +1,233 @@
+{
+  "about": "Every image site/build.ts publishes to GitHub Pages, read by eye for an API Key, password, session cookie or real address (pen test I6, #108, H17). A new, changed or removed image fails src/pen-test/probes/i6.test.ts until it is read again and its row here written anew. 'shows' lists every address, URL or host the image shows; 'nothing' means none.",
+  "readAt": "2f11db2",
+  "images": [
+    {
+      "published": "images/designer/built-in-passkey-added.png",
+      "source": "docs/images/designer/built-in-passkey-added.png",
+      "sha256": "dc456709f44fedeee4dff8c4b9cf14f4bbcd8ff26ce97d22b41db64a6744d4ff",
+      "shows": ["ada@example.com"]
+    },
+    {
+      "published": "images/designer/designer-button.png",
+      "source": "docs/images/designer/designer-button.png",
+      "sha256": "ef0b0ca11caef9cc7be2d5bfec253bcc49d9562da70cff11bff1193afe3e12a3",
+      "shows": ["test@example.com", "https://example.com"]
+    },
+    {
+      "published": "images/designer/designer-socials.png",
+      "source": "docs/images/designer/designer-socials.png",
+      "sha256": "61644a72ae32aac755bede3e6571eedaeba866d2e06524a7321ece4779368667",
+      "shows": [
+        "test@example.com",
+        "https://adrianeyre.co.uk",
+        "https://www.linkedin.com/in/adrianeyre",
+        "https://facebook.com/adrianeyre"
+      ]
+    },
+    {
+      "published": "images/designer/designer-text.png",
+      "source": "docs/images/designer/designer-text.png",
+      "sha256": "c4436732bfdb2e06712c427c9e10fa09c361ec0846666fb359a14aaa76249921",
+      "shows": ["test@example.com"]
+    },
+    {
+      "published": "images/designer/gallery.png",
+      "source": "docs/images/designer/gallery.png",
+      "sha256": "78e2fd16a703bce20293d2a7d9cf2101665819dedff29b31bbfe6c11658749b7",
+      "shows": [
+        "test@example.com",
+        "ada@example.com",
+        "https://wizzaroo.example.com/reset?token=abc123"
+      ]
+    },
+    {
+      "published": "images/illustrations/built-ins-dark.png",
+      "source": "docs/images/illustrations/built-ins-dark.png",
+      "sha256": "c7313cc4d44a5318999f24436bfd1642bcc8317eed7f07667dc189abe61220aa",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/built-ins.png",
+      "source": "docs/images/illustrations/built-ins.png",
+      "sha256": "77de58a89a7f9d0eba9b59f54b642789309cbb1e6bb97f47a8800f63d8319672",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-logs-dark.png",
+      "source": "docs/images/illustrations/features-logs-dark.png",
+      "sha256": "a0478dd2fea40bd429a06c9ffcaaa8e5fdd5cef45bacffaac13096bb09d330ee",
+      "shows": ["ada@example.com", "sam@example"]
+    },
+    {
+      "published": "images/illustrations/features-logs.png",
+      "source": "docs/images/illustrations/features-logs.png",
+      "sha256": "046a63b9307ebdf3e78d5f35be6b86d1ecc1d85a78426d6c8fca6994765be0a4",
+      "shows": ["ada@example.com", "sam@example"]
+    },
+    {
+      "published": "images/illustrations/features-preview-dark.png",
+      "source": "docs/images/illustrations/features-preview-dark.png",
+      "sha256": "c7994003e8b1a73aba94ea5f800ba9843cde6164010a3ad866ee243d75a1602d",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-preview.png",
+      "source": "docs/images/illustrations/features-preview.png",
+      "sha256": "c764bf6aab2c31f502b91302591791415a01db0e4a3b942de9ca49b7d67c4c1d",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-slug-dark.png",
+      "source": "docs/images/illustrations/features-slug-dark.png",
+      "sha256": "44586f5f7c77ebc33af059a01ee075d6f2a54355eef92e32b4d7e75c9628590d",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-slug.png",
+      "source": "docs/images/illustrations/features-slug.png",
+      "sha256": "80a68a3c4597b0493924e15d739b8a324246bcdd0f678ceda993575cf8c70c01",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-socials-dark.png",
+      "source": "docs/images/illustrations/features-socials-dark.png",
+      "sha256": "6231e9c1593c5b50effbae15adb59530fad95cd138f2787d41b98a1f5b0ef225",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/features-socials.png",
+      "source": "docs/images/illustrations/features-socials.png",
+      "sha256": "7a060ee781aebe9799324a2c266ec7ac6fcca5e6e4be66218b9ccebd65e22133",
+      "shows": []
+    },
+    {
+      "published": "images/illustrations/hero-dark.png",
+      "source": "docs/images/illustrations/hero-dark.png",
+      "sha256": "bebec70fb6299ddfdc080d9f6fd9694cae429b39d639417869686f753e1d8ed8",
+      "shows": ["mail.example.com", "ada@example.com"]
+    },
+    {
+      "published": "images/illustrations/hero.png",
+      "source": "docs/images/illustrations/hero.png",
+      "sha256": "549e0ca426f777b4db16b3e8686f6bee42836a7162a3eb1cdc32ca4a13f7a5a2",
+      "shows": ["mail.example.com", "ada@example.com"]
+    },
+    {
+      "published": "images/ui/accessibility-dialog.png",
+      "source": "docs/images/ui/accessibility-dialog.png",
+      "sha256": "f7d966ed0b2dea63f703bfa7fd6335664d4853fefe08ba3ca042775f32067b59",
+      "shows": ["test@example.com"]
+    },
+    {
+      "published": "images/ui/configuration.png",
+      "source": "docs/images/ui/configuration.png",
+      "sha256": "83a7fd3d8350f86657a6de7cc946dfba1e03ab74dc8059bcfe9a107444e5857c",
+      "shows": ["test@example.com", "no-reply@wizzaroo.adrianeyre.co.uk"]
+    },
+    {
+      "published": "images/ui/delivery.png",
+      "source": "docs/images/ui/delivery.png",
+      "sha256": "b439a9aeaa847bd4fd14aa67d4db4105648026cd066853670386ccbd5c9ebe70",
+      "shows": [
+        "test@example.com",
+        "localhost:1025",
+        "no-reply@adrianeyre.co.uk"
+      ]
+    },
+    {
+      "published": "images/ui/designer-header-footer.png",
+      "source": "docs/images/ui/designer-header-footer.png",
+      "sha256": "9dc08be8c497b6462f5f3501a2fd0cbab9bfced88c3cba1b0545924bf30eec45",
+      "shows": ["test@example.com", "no-reply@wizzaroo.adrianeyre.co.uk"]
+    },
+    {
+      "published": "images/ui/headers.png",
+      "source": "docs/images/ui/headers.png",
+      "sha256": "06f63bd3dd7b56ff47456b9a46f9763b32d76c72e814d5d8b60e0d1634212454",
+      "shows": ["test@example.com"]
+    },
+    {
+      "published": "images/ui/logs.png",
+      "source": "docs/images/ui/logs.png",
+      "sha256": "dd982961b7c5712985aae07e20d4c1f1172ccaccd4ba22064b3763b3be69d4b7",
+      "shows": ["test@example.com", "ada@example.com"]
+    },
+    {
+      "published": "images/ui/phone.png",
+      "source": "docs/images/ui/phone.png",
+      "sha256": "e57affc859785f82e72a4cb0c50b77eaf9b8fb8f4d590ad80840300f446d4994",
+      "shows": []
+    },
+    {
+      "published": "images/ui/preview-dark.png",
+      "source": "docs/images/ui/preview-dark.png",
+      "sha256": "f597aec31b7517276a64221f44bbbad92278f8a52cd7f81137d8c3ec2afee514",
+      "shows": [
+        "test@example.com",
+        "ada@example.com",
+        "https://wizzaroo.example.com/reset?token=abc123"
+      ]
+    },
+    {
+      "published": "images/ui/settings-dark.png",
+      "source": "docs/images/ui/settings-dark.png",
+      "sha256": "0456b1c6ed5eb34361822509d51bd74c8670723683adea90b35beda171e5dba4",
+      "shows": ["test@example.com"]
+    },
+    {
+      "published": "images/ui/sign-in.png",
+      "source": "docs/images/ui/sign-in.png",
+      "sha256": "851dbd82cf63c736f3a52ffc7c1a7eb3e74a6058e00d76b090bc463e8a797905",
+      "shows": []
+    },
+    {
+      "published": "images/ui/template.png",
+      "source": "docs/images/ui/template.png",
+      "sha256": "9dc08be8c497b6462f5f3501a2fd0cbab9bfced88c3cba1b0545924bf30eec45",
+      "shows": ["test@example.com", "no-reply@wizzaroo.adrianeyre.co.uk"]
+    },
+    {
+      "published": "images/ui/templates.png",
+      "source": "docs/images/ui/templates.png",
+      "sha256": "ab365a88cd0c5457a2de3db025368c8dad6afc753cc74000b7f3d7e7a3aad7d5",
+      "shows": ["test@example.com"]
+    },
+    {
+      "published": "favicon.ico",
+      "source": "src/ui/public/favicon.ico",
+      "sha256": "eb504279c262e62ab60cb7319fc49235e4f65cb9d82b334cb3881b9c6e2a03ca",
+      "shows": []
+    },
+    {
+      "published": "favicon.svg",
+      "source": "src/ui/public/favicon.svg",
+      "sha256": "da543bd07b382577d587bb2096e1411c84c6745de64d853805abda632076b796",
+      "shows": []
+    },
+    {
+      "published": "apple-touch-icon.png",
+      "source": "src/ui/public/apple-touch-icon.png",
+      "sha256": "881f582015d5d57d41fcbd7fe95e7c3726a38aefb69f5db34296780f25fe77f8",
+      "shows": []
+    },
+    {
+      "published": "icon-192.png",
+      "source": "src/ui/public/icon-192.png",
+      "sha256": "2d16818d9e3ed8b2a6dfeba2bafaee4bf900879a87fb335ed1227b215851a2ec",
+      "shows": []
+    },
+    {
+      "published": "icon-512.png",
+      "source": "src/ui/public/icon-512.png",
+      "sha256": "9171d1563cc0f58ed73424b54e032fe2090524184ee3025a95c32315162f8947",
+      "shows": []
+    },
+    {
+      "published": "og-image.png",
+      "source": "src/ui/public/og-image.png",
+      "sha256": "6373d527c8582d1eda37b8e24a878ddf7c009b7bd87a92ba7402851872618ff4",
+      "shows": []
+    }
+  ]
+}

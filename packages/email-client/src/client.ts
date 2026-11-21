@@ -14,15 +14,27 @@ import {
 } from "./errors.js";
 
 export interface EmailClientOptions {
-  /** Where the email app runs, such as `https://mail.example.com`. */
+  /**
+   * Where the email app runs, such as `https://mail.example.com`. An `http:` address is refused unless its host is
+   * loopback (`localhost`, `127.x.x.x` or `[::1]`) or `allowInsecureHttp` is `true`.
+   */
   baseUrl: string;
+  /**
+   * Allows an `http:` `baseUrl` on a host other than loopback. Over `http:`, the API key and every send's recipients
+   * and variables cross the network in the clear, readable by anyone on the path. Set it only for a network you trust
+   * as much as the key, such as the home LAN the self-hosted app serves plain HTTP on.
+   */
+  allowInsecureHttp?: boolean;
   /** An API key from the app's **API keys** page, starting `ek_`. */
   apiKey: string | undefined;
   /** Defaults to the global `fetch`. */
   fetch?: typeof globalThis.fetch;
   /** How long each request may take before it fails with `EmailTimeoutError`. Defaults to 10 seconds. */
   timeoutMs?: number;
-  /** Used when a send gives no `from`. Without either, the app uses the default from address in its Settings. */
+  /**
+   * Used when a send gives no `from`. Without either, the app uses the Template's Configuration, then the default from
+   * address in its Settings. Whichever it is, it must be an address the key's Application may send from.
+   */
   defaultFrom?: string;
 }
 
@@ -105,6 +117,8 @@ export interface Template {
   variables: string[];
   sampleVariables: Record<string, unknown>;
   design: Record<string, unknown> | null;
+  /** The Application that owns it: only that Application's API keys can change or delete it. */
+  applicationId: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -228,12 +242,52 @@ const expect = <T>(
   return body;
 };
 
-/** Creates a client for one email app. Throws at once when the API key is missing. */
+/** `localhost`, a `.localhost` name, `127.0.0.0/8` or `[::1]`: a host whose traffic never leaves the machine. */
+const isLoopback = (hostname: string): boolean =>
+  hostname === "localhost" ||
+  hostname.endsWith(".localhost") ||
+  hostname === "[::1]" ||
+  /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname);
+
+/**
+ * Refuses a `baseUrl` that isn't `https:` or `http:`, and an `http:` one on a host other than loopback unless the
+ * caller allowed it by name, so the API key never crosses a network in the clear by accident.
+ */
+const checkBaseUrl = (baseUrl: string, allowInsecureHttp: boolean): void => {
+  let url: URL;
+  try {
+    url = new URL(baseUrl);
+  } catch {
+    throw new TypeError("The email client's baseUrl must be an absolute URL");
+  }
+  const origin = `${url.protocol}//${url.host}`;
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new TypeError(
+      `The email client's baseUrl must be https: or http:, not ${url.protocol}`,
+    );
+  }
+  if (
+    url.protocol === "http:" &&
+    !isLoopback(url.hostname) &&
+    !allowInsecureHttp
+  ) {
+    throw new TypeError(
+      `The email client refuses the http: baseUrl ${origin}: the API key would cross the network in the clear. ` +
+        "Use https:, or pass allowInsecureHttp: true for a network you trust as much as the key",
+    );
+  }
+};
+
+/**
+ * Creates a client for one email app. Throws at once when the API key is missing, or when `baseUrl` is `http:` on a
+ * host other than loopback without `allowInsecureHttp: true`.
+ */
 export const createEmailClient = (options: EmailClientOptions): EmailClient => {
   const { apiKey, defaultFrom } = options;
   if (apiKey === undefined || apiKey.trim() === "") {
     throw new TypeError("The email client needs an API key");
   }
+  checkBaseUrl(options.baseUrl, options.allowInsecureHttp === true);
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
   const timeoutMs = options.timeoutMs ?? defaultTimeoutMs;
   const fetchImpl: typeof globalThis.fetch =

@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { readRecords, readText, requestJson } from "./api-client.js";
+import {
+  readCreator,
+  readRecords,
+  readText,
+  requestJson,
+} from "./api-client.js";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog.js";
+import { PasswordField } from "./password-field.js";
 import {
   CopyButton,
   EmptyState,
@@ -13,10 +19,16 @@ import {
   useActionRunner,
 } from "./ui-parts.js";
 import { useApiData } from "./use-api-data.js";
+import { ApplicationNameField } from "./application-picker.js";
+import { ApplicationsPanel } from "./applications-panel.js";
 
 export const ApiKeysPage = () => {
   const keys = useApiData("/app/api-keys");
   const [name, setName] = useState("");
+  const applications = useApiData("/app/applications");
+  const [application, setApplication] = useState("");
+  /** Your own password, asked again before a key is created (step-up). */
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newSecret, setNewSecret] = useState<string | undefined>(undefined);
   const { error, isBusy, runAction } = useActionRunner();
   const rows = readRecords(keys.data, "apiKeys");
@@ -34,11 +46,16 @@ export const ApiKeysPage = () => {
         onSubmit={submitForm(() => {
           runAction(
             () =>
-              requestJson("/app/api-keys", { method: "POST", body: { name } }),
+              requestJson("/app/api-keys", {
+                method: "POST",
+                body: { name, application, currentPassword },
+              }),
             (result) => {
               setNewSecret(readText(result, "secret"));
               setName("");
+              setCurrentPassword("");
               keys.reload();
+              applications.reload();
             },
           );
         })}
@@ -50,10 +67,23 @@ export const ApiKeysPage = () => {
           placeholder="My app"
           isRequired
         />
+        <ApplicationNameField
+          value={application}
+          onChange={setApplication}
+          names={readRecords(applications.data, "applications").map((row) =>
+            readText(row, "name"),
+          )}
+        />
+        <PasswordField
+          label="Your current password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          autoComplete="current-password"
+        />
         <button
           type="submit"
           className="button button-primary"
-          disabled={isBusy}
+          disabled={isBusy || currentPassword === ""}
         >
           Create API key
         </button>
@@ -75,8 +105,10 @@ export const ApiKeysPage = () => {
             <thead>
               <tr>
                 <th>Name</th>
+                <th>Application</th>
                 <th>Key</th>
                 <th>Created</th>
+                <th>Created by</th>
                 <th>Last used</th>
                 <th>
                   <span className="visually-hidden">Actions</span>
@@ -87,8 +119,10 @@ export const ApiKeysPage = () => {
               {rows.map((key) => (
                 <tr key={readText(key, "id")}>
                   <td>{readText(key, "name")}</td>
+                  <td>{readText(key, "applicationName")}</td>
                   <td className="mono">{readText(key, "prefix")}</td>
                   <td>{formatDateTime(readText(key, "createdAt"))}</td>
+                  <td>{readCreator(key)}</td>
                   <td>{formatDateTime(readText(key, "lastUsedAt"))}</td>
                   <td>
                     <button
@@ -120,6 +154,10 @@ export const ApiKeysPage = () => {
         }
         details={[
           { label: "Name", value: readText(deleting, "name") },
+          {
+            label: "Application",
+            value: readText(deleting, "applicationName"),
+          },
           {
             label: "Key",
             value: readText(deleting, "prefix"),
@@ -161,6 +199,7 @@ export const ApiKeysPage = () => {
           );
         }}
       />
+      <ApplicationsPanel applications={applications} onChange={keys.reload} />
     </>
   );
 };

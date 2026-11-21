@@ -29,7 +29,7 @@ import {
 } from "./seo.ts";
 
 /** The repository, named once: every link to it on the page comes from here. */
-export const repositoryUrl = "https://github.com/adrianeyre/email-platform";
+export const repositoryUrl = "https://github.com/adrianeyre/email-template";
 
 const root = join(import.meta.dirname, "..");
 const source = import.meta.dirname;
@@ -39,7 +39,7 @@ const siteDomain = process.env.SITE_DOMAIN ?? "";
 const siteUrl = (
   process.env.SITE_URL ??
   (siteDomain === ""
-    ? "https://adrianeyre.github.io/email-platform"
+    ? "https://adrianeyre.github.io/email-template"
     : `https://${siteDomain}`)
 ).replace(/\/+$/u, "");
 
@@ -116,7 +116,7 @@ function gatherPublicFiles(): string {
 const config = (publicDir: string): InlineConfig => ({
   configFile: false,
   root: source,
-  // Relative, so the built page works under /email-platform/ on github.io as well as at a domain's root.
+  // Relative, so the built page works under /email-template/ on github.io as well as at a domain's root.
   base: "./",
   publicDir,
   logLevel: "warn",

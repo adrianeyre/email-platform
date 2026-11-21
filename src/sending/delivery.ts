@@ -36,9 +36,15 @@ export const sendEmailOverSmtp: SendEmail = async (smtp, email) => {
     connectionTimeout: connectionTimeoutMs,
     greetingTimeout: connectionTimeoutMs,
     socketTimeout: connectionTimeoutMs,
+    // Credentials only ever cross TLS: without `secure`, STARTTLS is required whenever there is AUTH, so a server that
+    // doesn't offer it, or a network that strips it, fails the send before the credentials are sent (pen test I5,
+    // #186). With no username there is no AUTH, and a server with no TLS, such as Mailpit in development, still works.
     ...(smtp.username === undefined
       ? {}
-      : { auth: { user: smtp.username, pass: smtp.password ?? "" } }),
+      : {
+          auth: { user: smtp.username, pass: smtp.password ?? "" },
+          requireTLS: true,
+        }),
   });
   try {
     const info = await transport.sendMail({
@@ -60,12 +66,4 @@ export const sendEmailOverSmtp: SendEmail = async (smtp, email) => {
   } finally {
     transport.close();
   }
-};
-
-export const isPermanentSmtpFailure = (error: unknown): boolean => {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-  const responseCode: unknown = Reflect.get(error, "responseCode");
-  return typeof responseCode === "number" && responseCode >= 500;
 };

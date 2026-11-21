@@ -22,11 +22,42 @@ export interface ComposableTemplate {
   design: unknown;
 }
 
-const bodyPattern = /<body[^>]*>([\s\S]*)<\/body>/iu;
+/*
+ * The body scans look for a fixed string and then the next ">", so each is linear in the HTML's length. A pattern such
+ * as /<body[^>]*>/ retries [^>]* from every "<body" and is quadratic when none is closed: 40 KB of unclosed "<body"
+ * took a quarter of a second, and 1 MB about a minute (pen test S3, #137). Only the first "<body" can start a tag,
+ * since a later one has no earlier ">" to close it.
+ */
+const bodyOpen = /<body/iu;
+const bodyClose = /<\/body>/giu;
+
+/** Where the first <body …> tag ends, or undefined when there is none closed with ">". */
+const findBodyTagEnd = (html: string): number | undefined => {
+  const open = bodyOpen.exec(html);
+  if (open === null) {
+    return undefined;
+  }
+  const close = html.indexOf(">", open.index + open[0].length);
+  return close === -1 ? undefined : close + 1;
+};
+
+/** Where the last </body> at or after `from` starts, or -1. */
+const findLastBodyClose = (html: string, from: number): number => {
+  let last = -1;
+  for (const match of html.slice(from).matchAll(bodyClose)) {
+    last = from + match.index;
+  }
+  return last;
+};
 
 /** The part of a full HTML document inside <body>, or the whole text when it has none. */
-export const bodyOf = (html: string): string =>
-  (bodyPattern.exec(html)?.[1] ?? html).trim();
+export const bodyOf = (html: string): string => {
+  const start = findBodyTagEnd(html);
+  const end = start === undefined ? -1 : findLastBodyClose(html, start);
+  return (
+    start === undefined || end === -1 ? html : html.slice(start, end)
+  ).trim();
+};
 
 /** A part's blocks: its design's, or one HTML block holding its hand-written HTML. */
 export const partBlocks = (part: PartContent | undefined): Block[] => {
@@ -72,13 +103,12 @@ export const composeHtml = (
   }
   const top = header === undefined ? "" : bodyOf(header.html);
   const bottom = footer === undefined ? "" : bodyOf(footer.html);
-  const match = /<body[^>]*>/iu.exec(template.html);
-  if (match === null) {
+  const start = findBodyTagEnd(template.html);
+  if (start === undefined) {
     return [top, template.html, bottom]
       .filter((part) => part !== "")
       .join("\n");
   }
-  const start = match.index + match[0].length;
   const end = template.html.search(/<\/body>/iu);
   const close = end === -1 ? template.html.length : end;
   return `${template.html.slice(0, start)}\n${top}${template.html.slice(start, close)}${bottom}\n${template.html.slice(close)}`;

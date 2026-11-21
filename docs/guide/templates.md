@@ -9,6 +9,8 @@ A template has a **name**, a **slug**, a **subject**, an **HTML body**, an optio
 <ul>{{#each items}}<li>{{this.title}} × {{this.quantity}}</li>{{/each}}</ul>
 ```
 
+Handlebars' built-in helpers `if`, `unless`, `each`, `with` and `lookup` work as usual. `{{log}}` renders nothing and writes nothing anywhere: a template can't copy a variable, such as a reset link, into the server's log. A template can't reach a variable's prototype either (`{{constructor}}`, `{{__proto__}}`); it renders nothing.
+
 When the text body is empty, it is generated from the rendered HTML. The hidden preheader is left out of it.
 
 The HTML is made in one of two ways:
@@ -17,6 +19,17 @@ The HTML is made in one of two ways:
 - **By hand**, in a code editor with Handlebars highlighted.
 
 Sending only ever uses the HTML. The design is there for the editor.
+
+## Render bounds
+
+Every render, whether a send, a preview or a save, is held within fixed bounds, so no template or set of variables can keep the server busy:
+
+- the rendered **subject** may have up to 998 characters, the same as a raw subject;
+- the rendered **HTML** and **text body** may have up to 1,000,000 characters each (about 1 MB), the Header and Footer included;
+- the subject, HTML and text body may each hold up to 50,000 characters of Handlebars expressions (everything inside `{{…}}`, braces included), the Header's and Footer's included;
+- one render may only do so much work. Each block's code, each piece of output, each helper call, each `{{#each}}` round and each partial is counted, and a render that does more stops at once: three `{{#each}}` nested over 100 items each, a million rounds, is refused.
+
+A render past any of them is refused with `422`, naming the part (such as `subject`) when it is too long. A template is saved only if it renders with its sample variables, so the same bounds hold its own size; a send can still be refused when its variables make the render too long. A designed template uses a small part of each.
 
 ## Starting a template
 
@@ -44,7 +57,7 @@ The **Design** tab has three panes.
 | Divider | A line with its own colour, thickness, style (solid, dashed or dotted), width and alignment                                                                   |
 | Spacer  | Empty space of a set height                                                                                                                                   |
 | Socials | Linked icons for 27 social networks, a website and an email address, with their shape, colour, size, spacing, alignment and names. See [Socials](#socials)    |
-| HTML    | Your own HTML and Handlebars, shown in a frame that runs no scripts                                                                                           |
+| HTML    | Your own HTML and Handlebars, shown in a frame that runs no scripts and shares nothing with the app. It starts at a set height; drag its corner to resize it  |
 
 **The email, in the middle.** It is shown as it will look, in **Desktop** or **Phone** width. Click a block to select it. A selected block has a bar to drag it, move it up or down, duplicate it or delete it.
 
@@ -90,15 +103,17 @@ These settings apply to blocks of any type:
 
 - **Spacing and box:** space around the block (all sides or each side), a background colour, padding inside the box, a border on all sides or only the left (as on the "Wasn't you?" callouts), and corner rounding.
 - **Visibility:**
-  - **Show only if this variable is set** wraps the block in `{{#if variable}}`.
+  - **Show only if this variable is set** wraps the block in `{{#if variable}}`. It takes one variable name, such as `isVip` or `user.isVip`; anything else, such as a helper or a second expression, is left out, so the block always shows.
   - **Hide on phones** hides it on narrow screens.
+
+**Links and images.** A Button's link, an Image's picture and link, and a Socials address are written into the email only when they are an `http://` or `https://` URL, a `mailto:` or `tel:` address, a `#` link, or start with a variable such as `{{resetUrl}}`. Anything else, such as a `javascript:` or `data:` URL, is left out: the Button links to `#`, and the Image or the social icon isn't shown.
 
 ### The whole email
 
 With nothing selected, the properties pane holds the settings for the whole email:
 
 - **Inbox preview text:** the preheader that inboxes show after the subject. Variables work here.
-- **The default font, text size and line height.**
+- **The default font, text size and line height.** A font set through the API must be a font stack: names of letters, digits, spaces, hyphens and underscores, each bare or in quotes, separated by commas, such as `'Open Sans', Arial, sans-serif`. Anything else is replaced by Arial, Helvetica, sans-serif when the email is rendered.
 - **Text, heading and link colours.**
 - **The content area:** its width, the space above and below it, and its corner rounding.
 - **The page background, the content background and an optional border.**
@@ -162,7 +177,7 @@ The slug and the ID are shown with **Copy** buttons at the top of a template's p
 **Headers** and **Footers** in the side menu hold content shared by templates, such as a logo above every email or legal notes below it. Each is made in the same designer as a template, or by hand in HTML, with its own preview.
 
 - **Choosing them:** pick a template's header and footer under its subject.
-- **In the designer:** they show above and below the template's own blocks, striped and locked, with a link to edit them.
+- **In the designer:** they show above and below the template's own blocks, striped and locked, with a link to edit them. Like an HTML block, each shows in a frame that runs no scripts, at a set height you can drag.
 - **When sending:** the server puts them around the template's content. A designed template is rendered as one email with the template's own width, colours and fonts; hand-written HTML has them put just inside its `<body>`.
 - **Changing or deleting one:** an edit reaches every template using it straight away, with nothing to re-save. A header's page lists the templates using it. Deleting one leaves those templates without it.
 - **Variables:** a header or footer can use the template's variables, such as `{{email}}`.
@@ -175,7 +190,8 @@ The API has `GET`, `POST`, `PUT` and `DELETE` on `/v1/headers` and `/v1/footers`
 
 - a **name**, unique, shown when choosing one for a template;
 - a **from email address**, such as `no-reply@wizzaroo.adrianeyre.co.uk`;
-- a **from name**, such as `Wizzaroo`, shown with the address in the reader's inbox. Left empty, the email is sent from the address alone.
+- a **from name**, such as `Wizzaroo`, shown with the address in the reader's inbox. Left empty, the email is sent from the address alone;
+- an **Application**, or none. Only that Application's API keys may send from the configuration's address, so give an application a configuration for each address it sends from. With none, no key may send from it (unless it is also the default from address).
 
 Pick a template's configuration under its slug. A send without its own `from` address is then sent from the configuration's name and address, such as `Wizzaroo <no-reply@wizzaroo.adrianeyre.co.uk>`. A `from` in the request still wins, and a template with no configuration uses the default from address in Delivery. See [the from address](sending.md#the-from-address).
 
@@ -204,10 +220,10 @@ Each one is named with a `Wizzaroo - ` prefix, such as `Wizzaroo - Reset your pa
 Add all of them with:
 
 ```sh
-pnpm cli templates:add-built-ins
+pnpm cli templates:add-built-ins --application Wizzaroo
 ```
 
-This adds the header, the footer, the configuration and each email whose name and slug aren't taken yet, so it is safe to run again. Built-in emails with no configuration are given the Wizzaroo one. `pnpm cli templates:update-built-ins` replaces them with this version's and keeps their IDs. It sets each one's slug too, unless another template has it. It also renames any added before the `Wizzaroo - ` prefix. You can also start one template at a time from the gallery.
+This adds the header, the footer, the configuration and each email whose name and slug aren't taken yet, so it is safe to run again. `--application <name>` gives all of them to that application (made if it is new), so its API keys can change them and send from `no-reply@wizzaroo.adrianeyre.co.uk`; left out, they stay as they are, and new ones belong to no application. Built-in emails with no configuration are given the Wizzaroo one. `pnpm cli templates:update-built-ins` replaces them with this version's and keeps their IDs. It sets each one's slug too, unless another template has it. It also renames any added before the `Wizzaroo - ` prefix. You can also start one template at a time from the gallery.
 
 Dates and durations are passed in already formatted, such as `"20 November 2026 at 10:48 (UK time)"` and `"24 hours"`, so the sending application decides the wording and time zone.
 
@@ -231,12 +247,16 @@ Dates and durations are passed in already formatted, such as `"20 November 2026 
 
 `newEmailMasked` is the new address with its mailbox hidden, such as `a•••@example.com`. The [client package](../../packages/email-client/README.md) has `maskEmailAddress` for it.
 
+## Which application owns a template
+
+Every template, header, footer and configuration can belong to an **Application**, chosen in its editor's **Application** field, or to none. An API key can replace or delete only its own Application's templates, headers and footers; for any other, `PUT` and `DELETE` answer `404`, as an unknown ID does. A template, header or footer an API key makes belongs to its Application. Users can change and delete everything, and choose or change the owner. See [ADR 0009](../architectural-decision-record/0009-api-keys-belong-to-an-application.md).
+
 ## Through the API
 
 Applications can:
 
 - read templates with `GET /v1/templates` and `GET /v1/templates/{id}`;
-- manage them with `POST`, `PUT` and `DELETE`;
-- render content without saving it with `POST /v1/templates/preview`.
+- manage their own Application's with `POST`, `PUT` and `DELETE`;
+- render content without saving it with `POST /v1/templates/preview`, within the same [render bounds](#render-bounds) as a send.
 
 `design` is optional on `POST` and `PUT`. A `PUT` without it stores `null`, so a template whose HTML is replaced through the API leaves the designer.

@@ -52,6 +52,34 @@ describe("composing a template with its header and footer", () => {
     expect(html.match(/<!doctype html>/gu)).toHaveLength(1);
   });
 
+  it("reads the body tags as the old pattern did: the first <body …>, the last </body>, any case", () => {
+    expect(bodyOf("<BODY a=1><body>x</body>y</Body>z")).toBe("<body>x</body>y");
+    expect(bodyOf("<body>no close")).toBe("<body>no close");
+    expect(bodyOf("</body><body>x")).toBe("</body><body>x");
+    expect(bodyOf("<body never closed")).toBe("<body never closed");
+    expect(
+      composeHtml(
+        { subject: "s", html: "<body x>a</body>", design: null },
+        { html: "T", design: null },
+        undefined,
+      ),
+    ).toBe("<body x>\nTa\n</body>");
+  });
+
+  it("scans for <body in linear time, so 200,000 unclosed tags take milliseconds (pen test S3, #137)", () => {
+    const html = "<body".repeat(200_000);
+    const started = performance.now();
+    expect(bodyOf(html)).toBe(html);
+    expect(
+      composeHtml(
+        { subject: "s", html, design: null },
+        { html, design: null },
+        undefined,
+      ),
+    ).toHaveLength(html.length * 2 + 1);
+    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
   it("reads a part's body, and has no blocks for an empty one", () => {
     expect(bodyOf("<body class='x'> hi </body>")).toBe("hi");
     expect(partBlocks({ html: "  ", design: null })).toEqual([]);

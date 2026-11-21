@@ -47,6 +47,7 @@ describe("template form", () => {
       text: null,
       variables: ["name"],
       sampleVariables: { name: "Ada" },
+      applicationId: "7e570000-0000-4000-8000-000800000001",
     });
     expect(buildTemplateBody(form, { name: "Ada" })).toEqual({
       name: "Welcome",
@@ -60,6 +61,7 @@ describe("template form", () => {
       headerId: null,
       footerId: null,
       configurationId: null,
+      applicationId: "7e570000-0000-4000-8000-000800000001",
     });
   });
 

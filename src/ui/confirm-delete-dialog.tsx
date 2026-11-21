@@ -25,9 +25,11 @@ export const ConfirmDeleteDialog = ({
   confirmLabel,
   busyLabel = "Deleting…",
   isBusy,
+  canConfirm = true,
   error,
   onConfirm,
   onCancel,
+  children,
 }: {
   isOpen: boolean;
   /** Such as "Delete this template?" */
@@ -42,9 +44,13 @@ export const ConfirmDeleteDialog = ({
   /** Shown on the button while it works, such as "Removing…". */
   busyLabel?: string;
   isBusy: boolean;
+  /** False keeps the red button off, such as while a step-up password is empty. */
+  canConfirm?: boolean;
   error: unknown;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Fields asked for before deleting, such as "Your current password", shown below what happens. */
+  children?: ReactNode;
 }) => (
   <ModalDialog
     isOpen={isOpen}
@@ -66,7 +72,7 @@ export const ConfirmDeleteDialog = ({
           type="button"
           className="button button-danger-solid"
           onClick={onConfirm}
-          disabled={isBusy}
+          disabled={isBusy || !canConfirm}
         >
           <TrashIcon size={16} />
           {isBusy ? busyLabel : confirmLabel}
@@ -96,6 +102,7 @@ export const ConfirmDeleteDialog = ({
         <li key={index}>{consequence}</li>
       ))}
     </ul>
+    {children}
     <FailureNotice error={error} />
   </ModalDialog>
 );

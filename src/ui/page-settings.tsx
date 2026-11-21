@@ -55,6 +55,7 @@ const SettingsEditor = ({ initial }: { initial: unknown }) => {
   const save = useActionRunner();
   const test = useActionRunner();
   const hasPassword = readFlag(saved, "hasSmtpPassword");
+  const isPasswordUnreadable = readFlag(saved, "isSmtpPasswordUnreadable");
   const update = (change: Partial<SettingsForm>) => {
     setForm((current) => ({ ...current, ...change }));
   };
@@ -122,9 +123,11 @@ const SettingsEditor = ({ initial }: { initial: unknown }) => {
               update({ smtpPassword });
             }}
             hint={
-              hasPassword
-                ? "A password is saved. Leave blank to keep it."
-                : "Stored encrypted."
+              isPasswordUnreadable
+                ? "A password is saved, but it can't be read with this server's ENCRYPTION_KEY. Enter it again, or restart with the key it was saved under."
+                : hasPassword
+                  ? "A password is saved. Leave blank to keep it, unless you change the host or port: then enter it again."
+                  : "Stored encrypted. With a username, the connection must use TLS or STARTTLS."
             }
           />
         </fieldset>

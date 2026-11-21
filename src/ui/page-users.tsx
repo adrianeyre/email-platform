@@ -1,5 +1,10 @@
 import { useState } from "react";
-import { readRecords, readText, requestJson } from "./api-client.js";
+import {
+  readCreator,
+  readRecords,
+  readText,
+  requestJson,
+} from "./api-client.js";
 import { ConfirmDeleteDialog } from "./confirm-delete-dialog.js";
 import { KeyIcon, PlusIcon } from "./icons.js";
 import { ModalDialog } from "./modal-dialog.js";
@@ -120,8 +125,8 @@ const ChangePasswordDialog = ({
         })}
       >
         <p className="muted">
-          You stay signed in here. Use the new password the next time you sign
-          in.
+          You stay signed in here, and are signed out everywhere else. Use the
+          new password the next time you sign in.
         </p>
         <PasswordField
           label="Current password"
@@ -161,13 +166,16 @@ const AddUserDialog = ({
 }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const { error, isBusy, runAction } = useActionRunner();
   const rules = [lengthRule(password)];
   const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email.trim());
-  const canSubmit = isEmail && rules.every((rule) => rule.isMet);
+  const canSubmit =
+    isEmail && rules.every((rule) => rule.isMet) && currentPassword !== "";
   const close = () => {
     setEmail("");
     setPassword("");
+    setCurrentPassword("");
     onClose();
   };
   return (
@@ -200,7 +208,7 @@ const AddUserDialog = ({
             () =>
               requestJson("/app/users", {
                 method: "POST",
-                body: { email: added, password },
+                body: { email: added, password, currentPassword },
               }),
             () => {
               close();
@@ -247,6 +255,12 @@ const AddUserDialog = ({
           Share the password with them privately, such as in a password manager.
           They can change it under Users once signed in.
         </p>
+        <PasswordField
+          label="Your current password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          autoComplete="current-password"
+        />
         <FailureNotice error={error} />
       </form>
     </ModalDialog>
@@ -260,6 +274,8 @@ export const UsersPage = ({ currentUserId }: { currentUserId: string }) => {
   const [openDialog, setOpenDialog] = useState<OpenDialog>(undefined);
   /** The user whose Remove was pressed, kept while its dialog is open. */
   const [removing, setRemoving] = useState<unknown>(undefined);
+  /** Your own password, asked again before removing a user (step-up). */
+  const [currentPassword, setCurrentPassword] = useState("");
   const [status, setStatus] = useState("");
   const { error, isBusy, runAction } = useActionRunner();
   const rows = readRecords(users.data, "users");
@@ -306,6 +322,7 @@ export const UsersPage = ({ currentUserId }: { currentUserId: string }) => {
             <tr>
               <th>Email</th>
               <th>Added</th>
+              <th>Added by</th>
               <th>
                 <span className="visually-hidden">Actions</span>
               </th>
@@ -321,6 +338,7 @@ export const UsersPage = ({ currentUserId }: { currentUserId: string }) => {
                   ) : null}
                 </td>
                 <td>{formatDateTime(readText(user, "createdAt"))}</td>
+                <td>{readCreator(user)}</td>
                 <td className="table-actions">
                   {readText(user, "id") === currentUserId ? null : (
                     <button
@@ -385,9 +403,11 @@ export const UsersPage = ({ currentUserId }: { currentUserId: string }) => {
         confirmLabel="Remove user"
         busyLabel="Removing…"
         isBusy={isBusy}
+        canConfirm={currentPassword !== ""}
         error={removing === undefined ? undefined : error}
         onCancel={() => {
           setRemoving(undefined);
+          setCurrentPassword("");
         }}
         onConfirm={() => {
           const email = readText(removing, "email");
@@ -395,15 +415,24 @@ export const UsersPage = ({ currentUserId }: { currentUserId: string }) => {
             () =>
               requestJson(`/app/users/${readText(removing, "id")}`, {
                 method: "DELETE",
+                body: { currentPassword },
               }),
             () => {
               setRemoving(undefined);
+              setCurrentPassword("");
               setStatus(`${email} was removed.`);
               users.reload();
             },
           );
         }}
-      />
+      >
+        <PasswordField
+          label="Your current password"
+          value={currentPassword}
+          onChange={setCurrentPassword}
+          autoComplete="current-password"
+        />
+      </ConfirmDeleteDialog>
     </>
   );
 };
